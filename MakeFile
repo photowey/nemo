@@ -1,0 +1,11 @@
+tidy:
+	go mod tidy
+
+lint: tidy
+	golangci-lint run
+
+test:
+	go test ./... -cover -p 1
+
+build:
+	go build ./...
