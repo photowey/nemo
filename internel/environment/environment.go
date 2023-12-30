@@ -30,7 +30,58 @@ type PropertySource struct {
 	Map      collection.AnyMap // the map context, when the Type is map.
 }
 
-type Environment struct {
+type Environment interface {
+	Start(sources ...PropertySource) error
+	LoadSystemEnvVars()
+	LoadConfig(path, name string, reflectType reflect.Type)
+	LoadMap(sourceMap collection.AnyMap)
+	LoadMapSource(sourceMap collection.AnyMap)
+	LoadConfigSources() error
+	Get(key string) any
+	Set(key string, value any)
+}
+
+type StandardEnvironment struct {
 	configMap       collection.AnyMap
 	propertySources []PropertySource
+}
+
+func New(sources ...PropertySource) Environment {
+	return &StandardEnvironment{
+		configMap:       make(collection.AnyMap),
+		propertySources: sources,
+	}
+}
+
+func (e *StandardEnvironment) Start(sources ...PropertySource) error {
+	e.propertySources = append(e.propertySources, sources...)
+	return nil
+}
+
+func (e *StandardEnvironment) LoadSystemEnvVars() {
+
+}
+
+func (e *StandardEnvironment) LoadConfig(path, name string, _ reflect.Type) {
+
+}
+
+func (e *StandardEnvironment) LoadMap(sourceMap collection.AnyMap) {
+
+}
+
+func (e *StandardEnvironment) LoadMapSource(sourceMap collection.AnyMap) {
+
+}
+
+func (e *StandardEnvironment) LoadConfigSources() error {
+	return nil
+}
+
+func (e *StandardEnvironment) Get(key string) any {
+	return nil
+}
+
+func (e *StandardEnvironment) Set(key string, value any) {
+
 }
