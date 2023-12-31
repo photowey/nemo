@@ -19,6 +19,7 @@ package environment
 import (
 	"reflect"
 
+	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
 )
 
@@ -76,8 +77,30 @@ func New(sources ...PropertySource) Environment {
 // ----------------------------------------------------------------
 
 func (e *StandardEnvironment) Start(opts ...Option) error {
-	// e.propertySources = append(e.propertySources, sources...)
 	initOptions(opts...)
+
+	// prepare
+	eventPrepare := eventbus.NewStandardEnvironmentEvent(eventbus.PrepareEnvironmentEventName, e)
+	if err := eventbus.Post(eventPrepare); err != nil {
+		return nil
+	}
+
+	// pre load
+	preLoadEvent := eventbus.NewStandardEnvironmentEvent(eventbus.PreLoadEnvironmentEventName, e)
+	if err := eventbus.Post(preLoadEvent); err != nil {
+		return nil
+	}
+
+	// on load
+	if err := e.onLoad(); err != nil {
+		return nil
+	}
+
+	// post load
+	postLoadEvent := eventbus.NewStandardEnvironmentEvent(eventbus.PostLoadEnvironmentEventName, e)
+	if err := eventbus.Post(postLoadEvent); err != nil {
+		return nil
+	}
 
 	return nil
 }
@@ -103,6 +126,10 @@ func (e *StandardEnvironment) Contains(key string) bool {
 }
 
 // ----------------------------------------------------------------
+
+func (e *StandardEnvironment) onLoad() error {
+	return nil
+}
 
 func (e *StandardEnvironment) loadSystemEnvVars() {
 
@@ -160,6 +187,8 @@ func WithProperties(properties collection.AnyMap) Option {
 
 func initOptions(opts ...Option) *Options {
 	options := newOptions()
+
+	// do something
 
 	return options
 }

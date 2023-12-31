@@ -21,13 +21,16 @@ import (
 )
 
 const (
-	PrepareEnvironmentEventName = "nemo.prepare.environment.event"
+	PrepareEnvironmentEventName  = "nemo.prepare.environment.event"
+	PreLoadEnvironmentEventName  = "nemo.pre.environment.event"
+	PostLoadEnvironmentEventName = "nemo.post.environment.event"
 )
 
 // ----------------------------------------------------------------
 
 var (
-	_ Event[environment.Environment] = (*PrepareEnvironmentEvent)(nil)
+	_ Event[any] = (*StandardEnvironmentEvent)(nil)
+	_ Event[any] = (*StandardAnyEvent)(nil)
 )
 
 // ----------------------------------------------------------------
@@ -37,22 +40,46 @@ type Event[T any] interface {
 	Data() T
 }
 
-type PrepareEnvironmentEvent struct {
+// ----------------------------------------------------------------
+
+type StandardEnvironmentEvent struct {
 	event string
-	env   environment.Environment
+	data  environment.Environment
 }
 
-func NewPrepareEnvironmentEvent(env environment.Environment) Event[environment.Environment] {
-	return &PrepareEnvironmentEvent{
-		event: PrepareEnvironmentEventName,
-		env:   env,
+func NewStandardEnvironmentEvent(name string, data environment.Environment) Event[any] {
+	return &StandardEnvironmentEvent{
+		event: name,
+		data:  data,
 	}
 }
 
-func (e *PrepareEnvironmentEvent) Name() string {
+func (e *StandardEnvironmentEvent) Name() string {
 	return e.event
 }
 
-func (e *PrepareEnvironmentEvent) Data() environment.Environment {
-	return e.env
+func (e *StandardEnvironmentEvent) Data() any {
+	return e.data
+}
+
+// ----------------------------------------------------------------
+
+type StandardAnyEvent struct {
+	event string
+	data  any
+}
+
+func NewStandardAnyEvent(name string, data any) Event[any] {
+	return &StandardAnyEvent{
+		event: name,
+		data:  data,
+	}
+}
+
+func (e *StandardAnyEvent) Name() string {
+	return e.event
+}
+
+func (e *StandardAnyEvent) Data() any {
+	return e.data
 }

@@ -25,7 +25,6 @@ var (
 )
 
 var (
-	_         = (*eventBus[Event[any], EventListener[Event[any], any], any])(nil)
 	_eventbus = &eventBus[Event[any], EventListener[Event[any], any], any]{
 		listeners: make([]EventListener[Event[any], any], 0),
 	}

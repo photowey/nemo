@@ -21,7 +21,6 @@ const (
 )
 
 var (
-	_     EventListener[Event[any], any] = (*NoopEventListener[Event[any], any])(nil)
 	_noop EventListener[Event[any], any] = &NoopEventListener[Event[any], any]{}
 )
 
@@ -45,7 +44,7 @@ func (noop NoopEventListener[E, D]) Name() string {
 }
 
 func (noop NoopEventListener[E, D]) Supports(event string) bool {
-	return false
+	return NoopListenerName == event
 }
 
 func (noop NoopEventListener[E, D]) OnEvent(event E[D]) error {
