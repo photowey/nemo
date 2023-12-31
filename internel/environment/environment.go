@@ -142,6 +142,20 @@ func (e *StandardEnvironment) LoadMap(sourceMap collection.AnyMap) error {
 }
 
 func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) error {
+	for _, source := range sources {
+		if source.FilePath != "" {
+			if err := e.loadConfig(source.FilePath, source.Name, source.Type); err != nil {
+				return err
+			}
+		}
+
+		if source.Type != nil && source.Type.Kind() == reflect.Map {
+			if err := e.LoadMap(source.Map); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -160,6 +174,14 @@ func (e *StandardEnvironment) Contains(key string) bool {
 // ----------------------------------------------------------------
 
 func (e *StandardEnvironment) onLoad() error {
+	e.loadSystemEnvVars()
+
+	for _, source := range e.propertySources {
+		if err := e.LoadPropertySource(source); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -167,8 +189,8 @@ func (e *StandardEnvironment) loadSystemEnvVars() {
 
 }
 
-func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) {
-
+func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) error {
+	return nil
 }
 
 // ----------------------------------------------------------------
@@ -219,6 +241,9 @@ func WithProperties(properties collection.AnyMap) Option {
 
 func initOptions(opts ...Option) *Options {
 	options := newOptions()
+	for _, opt := range opts {
+		opt(options)
+	}
 
 	// do something
 
