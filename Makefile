@@ -9,8 +9,8 @@ lint: tidy
 fmt:
 	go fmt ./...
 
-test:
+test: tidy
 	go test ./... -cover -p 1
 
-build:
+build: tidy
 	go build ./...
