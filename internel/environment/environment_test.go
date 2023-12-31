@@ -14,37 +14,4 @@
  * limitations under the License.
  */
 
-package eventbus
-
-var (
-	_ Event = (*StandardAnyEvent)(nil)
-)
-
-// ----------------------------------------------------------------
-
-type Event interface {
-	Name() string
-	Data() any
-}
-
-// ----------------------------------------------------------------
-
-type StandardAnyEvent struct {
-	event string
-	data  any
-}
-
-func NewStandardAnyEvent(name string, data any) Event {
-	return &StandardAnyEvent{
-		event: name,
-		data:  data,
-	}
-}
-
-func (e *StandardAnyEvent) Name() string {
-	return e.event
-}
-
-func (e *StandardAnyEvent) Data() any {
-	return e.data
-}
+package environment

@@ -23,6 +23,38 @@ import (
 	"github.com/photowey/nemo/pkg/collection"
 )
 
+const (
+	PrepareEnvironmentEventName  = "nemo.prepare.environment.event"
+	PreLoadEnvironmentEventName  = "nemo.pre.environment.event"
+	PostLoadEnvironmentEventName = "nemo.post.environment.event"
+)
+
+var (
+	_ eventbus.Event = (*StandardEnvironmentEvent)(nil)
+)
+
+type StandardEnvironmentEvent struct {
+	event string
+	data  Environment
+}
+
+func NewStandardEnvironmentEvent(name string, data Environment) eventbus.Event {
+	return &StandardEnvironmentEvent{
+		event: name,
+		data:  data,
+	}
+}
+
+func (e *StandardEnvironmentEvent) Name() string {
+	return e.event
+}
+
+func (e *StandardEnvironmentEvent) Data() any {
+	return e.data
+}
+
+// ----------------------------------------------------------------
+
 type Option func(opts *Options)
 
 type Options struct {
@@ -80,13 +112,13 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	initOptions(opts...)
 
 	// prepare
-	eventPrepare := eventbus.NewStandardEnvironmentEvent(eventbus.PrepareEnvironmentEventName, e)
+	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
 	if err := eventbus.Post(eventPrepare); err != nil {
 		return nil
 	}
 
 	// pre load
-	preLoadEvent := eventbus.NewStandardEnvironmentEvent(eventbus.PreLoadEnvironmentEventName, e)
+	preLoadEvent := NewStandardEnvironmentEvent(PreLoadEnvironmentEventName, e)
 	if err := eventbus.Post(preLoadEvent); err != nil {
 		return nil
 	}
@@ -97,7 +129,7 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	}
 
 	// post load
-	postLoadEvent := eventbus.NewStandardEnvironmentEvent(eventbus.PostLoadEnvironmentEventName, e)
+	postLoadEvent := NewStandardEnvironmentEvent(PostLoadEnvironmentEventName, e)
 	if err := eventbus.Post(postLoadEvent); err != nil {
 		return nil
 	}

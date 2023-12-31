@@ -16,37 +16,32 @@
 
 package eventbus
 
-const (
-	NoopListenerName = "Noop"
+import (
+	"testing"
 )
 
-var (
-	_noop EventListener[Event] = &NoopEventListener[Event]{}
-)
-
-func init() {
-	_ = Register(_noop)
-}
-
-type EventListener[E Event] interface {
-	Name() string
-	Supports(event string) bool
-	OnEvent(event E) error
-}
-
-// ----------------------------------------------------------------
-
-type NoopEventListener[E Event] struct {
-}
-
-func (noop NoopEventListener[E]) Name() string {
-	return NoopListenerName
-}
-
-func (noop NoopEventListener[E]) Supports(event string) bool {
-	return NoopListenerName == event
-}
-
-func (noop NoopEventListener[E]) OnEvent(event E) error {
-	return nil
+func TestPost(t *testing.T) {
+	type args struct {
+		event Event
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "eventbus#Post",
+			args: args{
+				event: NewStandardAnyEvent("hello", "Hello world"),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := Post(tt.args.event); (err != nil) != tt.wantErr {
+				t.Errorf("Post() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
