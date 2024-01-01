@@ -16,8 +16,14 @@
 
 package eventbus
 
+import (
+	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/ordered"
+)
+
 const (
-	NoopListenerName = "Noop"
+	NoopListenerName  = "Noop"
+	NoopListenerTopic = "nemo.noop.event"
 )
 
 var (
@@ -29,22 +35,31 @@ func init() {
 }
 
 type EventListener[E Event] interface {
+	ordered.Ordered
 	Name() string
+	Topic() collection.StringSlice // []string
 	Supports(event string) bool
 	OnEvent(event E) error
 }
 
 // ----------------------------------------------------------------
 
-type NoopEventListener[E Event] struct {
+type NoopEventListener[E Event] struct{}
+
+func (noop NoopEventListener[E]) Order() int64 {
+	return ordered.DefaultPriority
 }
 
 func (noop NoopEventListener[E]) Name() string {
 	return NoopListenerName
 }
 
+func (noop NoopEventListener[E]) Topic() collection.StringSlice {
+	return collection.StringSlice{NoopListenerTopic}
+}
+
 func (noop NoopEventListener[E]) Supports(event string) bool {
-	return NoopListenerName == event
+	return NoopListenerTopic == event
 }
 
 func (noop NoopEventListener[E]) OnEvent(event E) error {

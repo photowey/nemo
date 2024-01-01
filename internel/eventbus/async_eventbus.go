@@ -16,40 +16,37 @@
 
 package eventbus
 
-var (
-	_ Event = (*StandardAnyEvent)(nil)
-)
-
-// ----------------------------------------------------------------
-
-type Event interface {
-	Name() string
-	Topic() string
-	Data() any
+type asyncEventBus struct {
+	listenerMap map[string][]EventListener[Event]
 }
 
 // ----------------------------------------------------------------
 
-type StandardAnyEvent struct {
-	event string
-	data  any
-}
+func (bus *asyncEventBus) Register(listener EventListener[Event]) error {
+	if listener != nil {
+		if len(listener.Topic()) == 0 {
+			return listenerTopicEmptyError
+		}
 
-func NewStandardAnyEvent(name string, data any) Event {
-	return &StandardAnyEvent{
-		event: name,
-		data:  data,
+		for _, topic := range listener.Topic() {
+			if _, ok := bus.listenerMap[topic]; !ok {
+				bus.listenerMap[topic] = make(EventListenerGroup, 0)
+			}
+
+			bus.listenerMap[topic] = append(bus.listenerMap[topic], listener)
+		}
+		return nil
 	}
+
+	return listenerNilError
 }
 
-func (e *StandardAnyEvent) Name() string {
-	return e.event
+func (bus *asyncEventBus) Post(event Event) error {
+	return bus.onEvent(event)
 }
 
-func (e *StandardAnyEvent) Topic() string {
-	return e.event
-}
+// ----------------------------------------------------------------
 
-func (e *StandardAnyEvent) Data() any {
-	return e.data
+func (bus *asyncEventBus) onEvent(_ Event) error {
+	return nil
 }
