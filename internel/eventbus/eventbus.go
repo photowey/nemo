@@ -30,6 +30,10 @@ var (
 	_eventbus = &eventBus{
 		listenerMap: make(EventListenerContainer),
 	}
+
+	_asyncEventbus = &asyncEventBus{
+		listenerMap: make(EventListenerContainer),
+	}
 )
 
 // ----------------------------------------------------------------
@@ -58,4 +62,9 @@ func Register(listener EventListener[Event]) error {
 
 func Post(event Event) error {
 	return _eventbus.Post(event)
+}
+
+// PostAsync but, not supported now
+func PostAsync(event Event) error {
+	return _asyncEventbus.Post(event)
 }

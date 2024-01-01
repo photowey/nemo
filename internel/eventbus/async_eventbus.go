@@ -16,6 +16,10 @@
 
 package eventbus
 
+import (
+	"errors"
+)
+
 type asyncEventBus struct {
 	listenerMap map[string][]EventListener[Event]
 }
@@ -48,5 +52,5 @@ func (bus *asyncEventBus) Post(event Event) error {
 // ----------------------------------------------------------------
 
 func (bus *asyncEventBus) onEvent(_ Event) error {
-	return nil
+	return errors.New("nemo: async eventbus not supported now")
 }

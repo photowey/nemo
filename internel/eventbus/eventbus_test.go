@@ -45,3 +45,29 @@ func TestPost(t *testing.T) {
 		})
 	}
 }
+
+func TestPostAsync(t *testing.T) {
+	type args struct {
+		event Event
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "eventbus#PostAsync",
+			args: args{
+				event: NewStandardAnyEvent("hello", "Hello world"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := PostAsync(tt.args.event); (err != nil) != tt.wantErr {
+				t.Errorf("Post() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
