@@ -12,7 +12,7 @@ built-in Binder supports structure binding. Supports loading of **`multi-path`**
 - `/opt/configs`
 - `...`
 
-> 高优先级
+> High priority
 
 ## 2.`Multi-search-path`
 
