@@ -85,10 +85,14 @@ type PropertySource struct {
 
 type Environment interface {
 	Start(opts ...Option) error
+	Destroy() error
+	Refresh(opts ...Option) error
 	LoadMap(sourceMap collection.AnyMap) error
 	LoadPropertySource(sources ...PropertySource) error
 	Get(key string) (any, bool)
+	NestedGet(key string) (any, bool)
 	Set(key string, value any) bool
+	NestedSet(key string, value any) bool
 	Contains(key string) bool
 }
 
@@ -141,6 +145,16 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	return nil
 }
 
+func (e *StandardEnvironment) Destroy() error {
+	return nil
+}
+
+func (e *StandardEnvironment) Refresh(opts ...Option) error {
+	// Destroy ...
+
+	return e.Start(opts...)
+}
+
 func (e *StandardEnvironment) LoadMap(sourceMap collection.AnyMap) error {
 	return nil
 }
@@ -167,7 +181,15 @@ func (e *StandardEnvironment) Get(key string) (any, bool) {
 	return nil, true
 }
 
+func (e *StandardEnvironment) NestedGet(key string) (any, bool) {
+	return nil, true
+}
+
 func (e *StandardEnvironment) Set(key string, value any) bool {
+	return true
+}
+
+func (e *StandardEnvironment) NestedSet(key string, value any) bool {
 	return true
 }
 
