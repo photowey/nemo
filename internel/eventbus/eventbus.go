@@ -21,14 +21,25 @@ import (
 )
 
 var (
-	listenerNilError = errors.New("nemo: listener can't be nil on `Register` action")
+	listenerNilError           = errors.New("nemo: listener can't be nil on `Register` action")
+	eventTopicOrNameEmptyError = errors.New("nemo: event topic or name can't be empty")
+	listenerTopicEmptyError    = errors.New("nemo: listener topics can't be empty")
 )
 
 var (
 	_eventbus = &eventBus{
-		listeners: make([]EventListener[Event], 0),
+		listenerMap: make(EventListenerContainer),
+	}
+
+	_asyncEventbus = &asyncEventBus{
+		listenerMap: make(EventListenerContainer),
 	}
 )
+
+// ----------------------------------------------------------------
+
+type EventListenerGroup = []EventListener[Event]
+type EventListenerContainer = map[string]EventListenerGroup
 
 // ----------------------------------------------------------------
 
@@ -43,38 +54,6 @@ type EventBus interface {
 	Post(event Event) error
 }
 
-type eventBus struct {
-	listeners []EventListener[Event]
-}
-
-// ----------------------------------------------------------------
-
-func (bus *eventBus) Register(listener EventListener[Event]) error {
-	if listener != nil {
-		bus.listeners = append(bus.listeners, listener)
-		return nil
-	}
-
-	return listenerNilError
-}
-
-func (bus *eventBus) Post(event Event) error {
-	return bus.onEvent(event)
-}
-
-// ----------------------------------------------------------------
-
-func (bus *eventBus) onEvent(event Event) error {
-	// sort ?
-	for _, h := range bus.listeners {
-		if h.Supports(event.Name()) {
-			return h.OnEvent(event)
-		}
-	}
-
-	return nil
-}
-
 // ----------------------------------------------------------------
 
 func Register(listener EventListener[Event]) error {
@@ -83,4 +62,9 @@ func Register(listener EventListener[Event]) error {
 
 func Post(event Event) error {
 	return _eventbus.Post(event)
+}
+
+// PostAsync but, not supported now
+func PostAsync(event Event) error {
+	return _asyncEventbus.Post(event)
 }

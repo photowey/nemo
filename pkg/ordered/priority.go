@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package collection
+package ordered
 
-// ---------------------------------------------------------------- map
-
-type (
-	AnyMap    = map[any]any
-	Int64Map  = map[int64]int64
-	MixedMap  = map[string]any
-	StringMap = map[string]string
-)
-
-// ---------------------------------------------------------------- string
-
-type (
-	StringSlice = []string
-	Int64Slice  = []int64
+const (
+	MaxInt64        int64 = 1<<63 - 1 // 9223372036854775807
+	MinInt64        int64 = -1 << 63  // -9223372036854775808
+	MaxInt32        int32 = 1<<31 - 1 // 2147483647
+	MinInt32        int32 = -1 << 31  // -2147483648
+	MaxInt          int   = 1<<31 - 1 // 2147483647
+	MinInt          int   = -1 << 31  // 2147483648
+	LowPriority           = MaxInt64  // 9223372036854775807
+	HighPriority          = MinInt64  // -9223372036854775808
+	DefaultPriority int64 = 0         // 0
+	DefaultStep     int64 = 100       // 100
 )

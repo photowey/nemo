@@ -49,6 +49,10 @@ func (e *StandardEnvironmentEvent) Name() string {
 	return e.event
 }
 
+func (e *StandardEnvironmentEvent) Topic() string {
+	return e.event
+}
+
 func (e *StandardEnvironmentEvent) Data() any {
 	return e.data
 }

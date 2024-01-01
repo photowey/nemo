@@ -14,42 +14,24 @@
  * limitations under the License.
  */
 
-package eventbus
+package ordered
 
-var (
-	_ Event = (*StandardAnyEvent)(nil)
+import (
+	"testing"
 )
 
-// ----------------------------------------------------------------
+func TestPriority(t *testing.T) {
+	t.Logf("max int64:%d\n", MaxInt64)
+	t.Logf("min int64:%d\n", MinInt64)
 
-type Event interface {
-	Name() string
-	Topic() string
-	Data() any
-}
+	t.Logf("max int32:%d\n", MaxInt32)
+	t.Logf("min int32:%d\n", MinInt32)
 
-// ----------------------------------------------------------------
+	t.Logf("max int:%d\n", MaxInt)
+	t.Logf("min int:%d\n", MinInt)
 
-type StandardAnyEvent struct {
-	event string
-	data  any
-}
-
-func NewStandardAnyEvent(name string, data any) Event {
-	return &StandardAnyEvent{
-		event: name,
-		data:  data,
-	}
-}
-
-func (e *StandardAnyEvent) Name() string {
-	return e.event
-}
-
-func (e *StandardAnyEvent) Topic() string {
-	return e.event
-}
-
-func (e *StandardAnyEvent) Data() any {
-	return e.data
+	t.Logf("high priority :%d\n", HighPriority)
+	t.Logf("low priority :%d\n", LowPriority)
+	t.Logf("default priority :%d\n", DefaultPriority)
+	t.Logf("default strp :%d\n", DefaultStep)
 }
