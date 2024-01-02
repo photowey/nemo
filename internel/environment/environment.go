@@ -21,6 +21,7 @@ import (
 
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/ordered"
 )
 
 const (
@@ -75,6 +76,8 @@ type Options struct {
 // ----------------------------------------------------------------
 
 type PropertySource struct {
+	ordered.Ordered
+	Priority int64             // the of priority of the PropertySource.
 	Property string            // the name of the PropertySource.
 	FilePath string            // the path of config file. -> e.g.: /opt/data | /opt/configs
 	Name     string            // the name of config file. -> e.g.: config.yaml | config.yml config.toml
@@ -82,6 +85,15 @@ type PropertySource struct {
 	Type     reflect.Type      // the type of PropertySource, only support map now.
 	Map      collection.AnyMap // the map context, when the Type is map.
 }
+
+// Order | the priority value of PropertySource sort.
+//
+// The smaller the value, the higher the priority.
+func (ps PropertySource) Order() int64 {
+	return ps.Priority
+}
+
+// ----------------------------------------------------------------
 
 type Environment interface {
 	Start(opts ...Option) error
