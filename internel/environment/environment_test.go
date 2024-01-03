@@ -45,13 +45,13 @@ func TestNew(t *testing.T) {
 			name: "environment#New",
 			args: args{
 				sources: []PropertySource{
-					{Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
+					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
 			},
 			want: &StandardEnvironment{
 				configMap: make(collection.AnyMap),
 				propertySources: []PropertySource{
-					{Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
+					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
 				profiles: make(collection.StringSlice, 0),
 			},
@@ -123,7 +123,7 @@ func TestStandardEnvironment_Start(t *testing.T) {
 			fields: fields{
 				configMap: make(collection.AnyMap),
 				propertySources: []PropertySource{
-					{Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
+					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
 				profiles: collection.StringSlice{"dev"},
 			},
@@ -134,7 +134,7 @@ func TestStandardEnvironment_Start(t *testing.T) {
 					WithConfigTypes("yaml", "yml", "toml"),
 					WithSearchPaths("resources", "configs"),
 					WithProfiles("dev", "test"),
-					WithSources(PropertySource{Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"}),
+					WithSources(PropertySource{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"}),
 					WithProperties(properties),
 				},
 			},

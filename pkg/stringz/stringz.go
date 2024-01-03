@@ -42,6 +42,63 @@ func IsNotBlankString(str string) bool {
 	return !IsBlankString(str)
 }
 
+// ----------------------------------------------------------------
+
+func ArrayContains(haystack []string, needle string) bool {
+	for _, a := range haystack {
+		if strings.EqualFold(a, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func CloneSlice(src []string) []string {
+	dst := make([]string, len(src))
+	copy(dst, src)
+
+	return dst
+}
+
+func Implode(haystack []string, separator string) string {
+	if len(haystack) == 0 {
+		return EmptyString
+	}
+
+	var buf strings.Builder
+	for _, str := range haystack {
+		if EmptyString == str {
+			continue
+		}
+		buf.WriteString(str)
+		buf.WriteString(separator)
+	}
+
+	return strings.TrimRight(buf.String(), separator)
+}
+
+func Explode(haystack string, separator string) []string {
+	if EmptyString == haystack {
+		return MakeStringSlice(0)
+	}
+
+	return strings.Split(haystack, separator)
+}
+
+func MakeStringSlice(length int) []string {
+	return make([]string, length)
+}
+
+func InitStringSlice(haystack ...string) []string {
+	slice := MakeStringSlice(len(haystack))
+	copy(slice, haystack)
+
+	return slice
+}
+
+// ----------------------------------------------------------------
+
 func Format(sources ...string) string {
 	return fmt.Sprintf("%v", sources)
 }

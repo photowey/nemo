@@ -17,22 +17,47 @@
 package environment
 
 import (
+	"os"
 	"reflect"
+	"strings"
 
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
+	"github.com/photowey/nemo/pkg/stringz"
 )
 
 const (
-	PrepareEnvironmentEventName  = "nemo.prepare.environment.event"
-	PreLoadEnvironmentEventName  = "nemo.pre.environment.event"
-	PostLoadEnvironmentEventName = "nemo.post.environment.event"
+	PrepareEnvironmentEventName  = "nemo.environment.prepare.event"
+	PreLoadEnvironmentEventName  = "nemo.environment.load.pre.event"
+	PostLoadEnvironmentEventName = "nemo.environment.load.post.event"
+	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
+)
+
+const (
+	DefaultSystemPropertySourceName = "os.env"
+	EvnSeparator                    = "="
+	EvnValidLength                  = 2
 )
 
 var (
 	_ eventbus.Event = (*StandardEnvironmentEvent)(nil)
 )
+
+var (
+	confusedEnvironments = collection.StringSlice{
+		"::",
+	}
+)
+
+// ----------------------------------------------------------------
+
+func RegisterSpecialEnvironment(key, value string) {
+	_ = key
+	confusedEnvironments = append(confusedEnvironments, value)
+}
+
+// ----------------------------------------------------------------
 
 type StandardEnvironmentEvent struct {
 	event string
@@ -63,27 +88,33 @@ func (e *StandardEnvironmentEvent) Data() any {
 type Option func(opts *Options)
 
 type Options struct {
-	AbsolutePaths []string          // /opt/data | /opt/configs | ...
-	ConfigNames   []string          // application | config | configs | ...
-	ConfigTypes   []string          // yaml/yml | toml -> but, json not support now.
-	SearchPaths   []string          // ./resources | ./configs ...
-	Profiles      []string          // dev | test | prod | ...
-	Sources       []PropertySource  // PropertySource
-	Properties    collection.AnyMap // Properties -> map data-structure -> can also be replaced by PropertySource
-	ThrowLevel    int               // 0: all 1:anyone
+	AbsolutePaths collection.StringSlice // /opt/data | /opt/configs | ...
+	ConfigNames   collection.StringSlice // application | config | configs | ...
+	ConfigTypes   collection.StringSlice // yaml/yml | toml -> but, json not support now.
+	SearchPaths   collection.StringSlice // ./resources | ./configs ...
+	Profiles      collection.StringSlice // dev | test | prod | ...
+	Sources       PropertySources        // PropertySource
+	Properties    collection.AnyMap      // Properties -> map data-structure -> can also be replaced by PropertySource
+	ThrowLevel    int                    // 0: all 1:anyone
+}
+
+func (opts *Options) validate() {
+	// validate options?
 }
 
 // ----------------------------------------------------------------
 
+type PropertySources = []PropertySource
+
 type PropertySource struct {
-	ordered.Ordered
-	Priority int64             // the of priority of the PropertySource.
-	Property string            // the name of the PropertySource.
-	FilePath string            // the path of config file. -> e.g.: /opt/data | /opt/configs
-	Name     string            // the name of config file. -> e.g.: config.yaml | config.yml config.toml
-	Suffix   string            // the suffix of config file -> Name == config Suffix == yml -> Full name == config.yml
-	Type     reflect.Type      // the type of PropertySource, only support map now.
-	Map      collection.AnyMap // the map context, when the Type is map.
+	ordered.Ordered                   // declare ordered
+	Priority        int64             // the of priority of the PropertySource.
+	Property        string            // the name of the PropertySource.
+	FilePath        string            // the path of config file. -> e.g.: /opt/data | /opt/configs
+	Name            string            // the name of config file. -> e.g.: config.yaml | config.yml config.toml
+	Suffix          string            // the suffix of config file -> Name == config Suffix == yml -> Full name == config.yml
+	Type            reflect.Type      // the type of PropertySource, only support map now. // or string ?
+	Map             collection.AnyMap // the map context, when the Type is map.
 }
 
 // Order | the priority value of PropertySource sort.
@@ -110,10 +141,14 @@ type Environment interface {
 
 // ----------------------------------------------------------------
 
+// errors 抽象设计
+
+// ----------------------------------------------------------------
+
 type StandardEnvironment struct {
-	configMap       collection.AnyMap // core config container
-	propertySources []PropertySource  // config sources
-	profiles        []string          // Profiles active e.g.: dev test prod ...
+	configMap       collection.AnyMap      // core config container
+	propertySources []PropertySource       // config sources
+	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
 }
 
 // ----------------------------------------------------------------
@@ -122,14 +157,15 @@ func New(sources ...PropertySource) Environment {
 	return &StandardEnvironment{
 		configMap:       make(collection.AnyMap),
 		propertySources: sources,
-		profiles:        make([]string, 0),
+		profiles:        make(collection.StringSlice, 0),
 	}
 }
 
 // ----------------------------------------------------------------
 
 func (e *StandardEnvironment) Start(opts ...Option) error {
-	initOptions(opts...)
+	optz := initOptions(opts...)
+	e.translateToPropertySources(optz)
 
 	// prepare
 	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
@@ -157,6 +193,10 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	return nil
 }
 
+func (e *StandardEnvironment) translateToPropertySources(opts *Options) {
+
+}
+
 func (e *StandardEnvironment) Destroy() error {
 	return nil
 }
@@ -173,7 +213,7 @@ func (e *StandardEnvironment) LoadMap(sourceMap collection.AnyMap) error {
 
 func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) error {
 	for _, source := range sources {
-		if source.FilePath != "" {
+		if stringz.IsNotBlankString(source.FilePath) {
 			if err := e.loadConfig(source.FilePath, source.Name, source.Type); err != nil {
 				return err
 			}
@@ -190,7 +230,7 @@ func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) erro
 }
 
 func (e *StandardEnvironment) Get(key string) (any, bool) {
-	return nil, true
+	return e.getProperty(key)
 }
 
 func (e *StandardEnvironment) NestedGet(key string) (any, bool) {
@@ -198,7 +238,7 @@ func (e *StandardEnvironment) NestedGet(key string) (any, bool) {
 }
 
 func (e *StandardEnvironment) Set(key string, value any) bool {
-	return true
+	return e.setProperty(key, value)
 }
 
 func (e *StandardEnvironment) NestedSet(key string, value any) bool {
@@ -209,10 +249,21 @@ func (e *StandardEnvironment) Contains(key string) bool {
 	return true
 }
 
+func (e *StandardEnvironment) setProperty(key string, value any) bool {
+	return true
+}
+
+func (e *StandardEnvironment) getProperty(key string) (any, bool) {
+	return nil, true
+}
+
 // ----------------------------------------------------------------
 
 func (e *StandardEnvironment) onLoad() error {
 	e.loadSystemEnvVars()
+
+	sorter := ordered.NewSorter(e.propertySources...)
+	ordered.Sort(sorter, -1)
 
 	for _, source := range e.propertySources {
 		if err := e.LoadPropertySource(source); err != nil {
@@ -224,7 +275,53 @@ func (e *StandardEnvironment) onLoad() error {
 }
 
 func (e *StandardEnvironment) loadSystemEnvVars() {
+	envVars := make(collection.AnyMap)
 
+	for _, env := range os.Environ() {
+		pair := strings.SplitN(env, EvnSeparator, EvnValidLength) // k=v -> 2
+		// warning:
+		// -> ${env} == [ =::=::\ ] ?
+		if len(pair) == 2 {
+			envVars[pair[0]] = pair[1]
+
+			postParse(env)
+		}
+	}
+
+	e.loadSystemEnvMap(envVars)
+}
+
+func postParse(env string) {
+	for _, confusedEnv := range confusedEnvironments {
+		if strings.Contains(env, confusedEnv) {
+			// post: confused event?
+			confusedEvent := eventbus.NewStandardAnyEvent(ConfusedEnvironmentEventName, env)
+			_ = eventbus.Post(confusedEvent)
+		}
+	}
+
+	if stringz.ArrayContains(confusedEnvironments, env) {
+		confusedEvent := eventbus.NewStandardAnyEvent(ConfusedEnvironmentEventName, env)
+		_ = eventbus.Post(confusedEvent)
+	}
+}
+
+func initSystemEnvPropertySource(envVars collection.AnyMap) PropertySource {
+	return PropertySource{
+		Priority: ordered.HighPriority,
+		Property: DefaultSystemPropertySourceName,
+		Type:     reflect.TypeOf(collection.AnyMap{}),
+		Map:      envVars,
+	}
+}
+
+func (e *StandardEnvironment) loadSystemEnvMap(envVars collection.AnyMap) {
+	e.loadSystemEnvMapDelayed(envVars)
+}
+
+func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.AnyMap) {
+	envPs := initSystemEnvPropertySource(envVars)
+	e.propertySources = append(e.propertySources, envPs)
 }
 
 func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) error {
@@ -235,37 +332,37 @@ func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) erro
 
 func WithAbsolutePaths(absolutePaths ...string) Option {
 	return func(opts *Options) {
-		opts.AbsolutePaths = absolutePaths
+		opts.AbsolutePaths = append(opts.AbsolutePaths, absolutePaths...)
 	}
 }
 
 func WithConfigNames(configNames ...string) Option {
 	return func(opts *Options) {
-		opts.ConfigNames = configNames
+		opts.ConfigNames = append(opts.ConfigNames, configNames...)
 	}
 }
 
 func WithConfigTypes(configTypes ...string) Option {
 	return func(opts *Options) {
-		opts.ConfigTypes = configTypes
+		opts.ConfigTypes = append(opts.ConfigTypes, configTypes...)
 	}
 }
 
 func WithSearchPaths(searchPaths ...string) Option {
 	return func(opts *Options) {
-		opts.SearchPaths = searchPaths
+		opts.SearchPaths = append(opts.SearchPaths, searchPaths...)
 	}
 }
 
 func WithProfiles(profiles ...string) Option {
 	return func(opts *Options) {
-		opts.Profiles = profiles
+		opts.Profiles = append(opts.Profiles, profiles...)
 	}
 }
 
 func WithSources(sources ...PropertySource) Option {
 	return func(opts *Options) {
-		opts.Sources = sources
+		opts.Sources = append(opts.Sources, sources...)
 	}
 }
 
@@ -283,19 +380,23 @@ func initOptions(opts ...Option) *Options {
 		opt(options)
 	}
 
-	// do something
+	populateIfNecessary(options)
 
 	return options
 }
 
+func populateIfNecessary(opts *Options) {
+	opts.validate()
+}
+
 func newOptions() *Options {
 	return &Options{
-		AbsolutePaths: make([]string, 0),
-		ConfigNames:   make([]string, 0),
-		ConfigTypes:   make([]string, 0),
-		SearchPaths:   make([]string, 0),
-		Profiles:      make([]string, 0),
-		Sources:       make([]PropertySource, 0),
+		AbsolutePaths: make(collection.StringSlice, 0),
+		ConfigNames:   make(collection.StringSlice, 0),
+		ConfigTypes:   make(collection.StringSlice, 0),
+		SearchPaths:   make(collection.StringSlice, 0),
+		Profiles:      make(collection.StringSlice, 0),
+		Sources:       make(PropertySources, 0),
 		Properties:    make(collection.AnyMap),
 	}
 }
