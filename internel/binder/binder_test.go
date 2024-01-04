@@ -40,7 +40,7 @@ func TestBinder_Bind(t *testing.T) {
 	type args struct {
 		prefix string
 		target Main
-		ctx    collection.AnyMap
+		ctx    collection.MixedMap
 	}
 	tests := []struct {
 		name string
@@ -52,17 +52,17 @@ func TestBinder_Bind(t *testing.T) {
 			args: args{
 				prefix: "a.b.c",
 				target: Main{},
-				ctx: collection.AnyMap{
-					"a": collection.AnyMap{
-						"b": collection.AnyMap{
-							"c": collection.AnyMap{
+				ctx: collection.MixedMap{
+					"a": collection.MixedMap{
+						"b": collection.MixedMap{
+							"c": collection.MixedMap{
 								"d": "Hello",
 								"e": 42,
 								"f": true,
-								"g": collection.AnyMap{
+								"g": collection.MixedMap{
 									"h": 3.14,
 								},
-								"sub": collection.AnyMap{
+								"sub": collection.MixedMap{
 									"x": "Nested",
 									"y": 123,
 								},
@@ -89,7 +89,7 @@ func TestBinder_DefaultBind(t *testing.T) {
 	type args struct {
 		prefix string
 		target Main
-		ctx    collection.AnyMap
+		ctx    collection.MixedMap
 	}
 	tests := []struct {
 		name string
@@ -101,17 +101,17 @@ func TestBinder_DefaultBind(t *testing.T) {
 			args: args{
 				prefix: "a.b.c",
 				target: Main{},
-				ctx: collection.AnyMap{
-					"a": collection.AnyMap{
-						"b": collection.AnyMap{
-							"c": collection.AnyMap{
+				ctx: collection.MixedMap{
+					"a": collection.MixedMap{
+						"b": collection.MixedMap{
+							"c": collection.MixedMap{
 								"d": "Hello",
 								"e": 42,
 								"f": true,
-								"g": collection.AnyMap{
+								"g": collection.MixedMap{
 									"h": 3.14,
 								},
-								"sub": collection.AnyMap{
+								"sub": collection.MixedMap{
 									"x": "Nested",
 									"y": 123,
 								},

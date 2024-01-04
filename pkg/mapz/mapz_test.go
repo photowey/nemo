@@ -25,7 +25,7 @@ import (
 
 func TestNestedGet(t *testing.T) {
 	type args struct {
-		ctx collection.AnyMap
+		ctx collection.MixedMap
 		key string
 	}
 	tests := []struct {
@@ -37,9 +37,9 @@ func TestNestedGet(t *testing.T) {
 		{
 			name: "mapz#NestedGet_true",
 			args: args{
-				ctx: collection.AnyMap{
+				ctx: collection.MixedMap{
 					"a": 1,
-					"b": collection.AnyMap{
+					"b": collection.MixedMap{
 						"c": 2,
 					},
 				},
@@ -51,9 +51,9 @@ func TestNestedGet(t *testing.T) {
 		{
 			name: "mapz#NestedGet_false_1",
 			args: args{
-				ctx: collection.AnyMap{
+				ctx: collection.MixedMap{
 					"a": 1,
-					"b": collection.AnyMap{
+					"b": collection.MixedMap{
 						"c": 2,
 					},
 				},
@@ -65,9 +65,9 @@ func TestNestedGet(t *testing.T) {
 		{
 			name: "mapz#NestedGet_false_2",
 			args: args{
-				ctx: collection.AnyMap{
+				ctx: collection.MixedMap{
 					"a": 1,
-					"b": collection.AnyMap{
+					"b": collection.MixedMap{
 						"c": 2,
 					},
 				},
@@ -92,30 +92,30 @@ func TestNestedGet(t *testing.T) {
 
 func TestNestedSet(t *testing.T) {
 	type args struct {
-		ctx   collection.AnyMap
+		ctx   collection.MixedMap
 		key   string
 		value any
 	}
 	tests := []struct {
 		name string
 		args args
-		want collection.AnyMap
+		want collection.MixedMap
 	}{
 		{
 			name: "mapz#NestedSet_1",
 			args: args{
-				ctx: collection.AnyMap{
+				ctx: collection.MixedMap{
 					"a": 1,
-					"b": collection.AnyMap{
+					"b": collection.MixedMap{
 						"c": 2,
 					},
 				},
 				key:   "b.d",
 				value: 3,
 			},
-			want: collection.AnyMap{
+			want: collection.MixedMap{
 				"a": 1,
-				"b": collection.AnyMap{
+				"b": collection.MixedMap{
 					"c": 2,
 					"d": 3,
 				},
@@ -124,23 +124,23 @@ func TestNestedSet(t *testing.T) {
 		{
 			name: "mapz#NestedSet_2",
 			args: args{
-				ctx: collection.AnyMap{
+				ctx: collection.MixedMap{
 					"a": 1,
-					"b": collection.AnyMap{
+					"b": collection.MixedMap{
 						"c": 2,
 					},
 				},
 				key: "b.e",
-				value: collection.AnyMap{
+				value: collection.MixedMap{
 					"c": 2,
 					"d": 3,
 				},
 			},
-			want: collection.AnyMap{
+			want: collection.MixedMap{
 				"a": 1,
-				"b": collection.AnyMap{
+				"b": collection.MixedMap{
 					"c": 2,
-					"e": collection.AnyMap{
+					"e": collection.MixedMap{
 						"c": 2,
 						"d": 3,
 					},

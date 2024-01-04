@@ -94,7 +94,7 @@ type Options struct {
 	SearchPaths   collection.StringSlice // ./resources | ./configs ...
 	Profiles      collection.StringSlice // dev | test | prod | ...
 	Sources       PropertySources        // PropertySource
-	Properties    collection.AnyMap      // Properties -> map data-structure -> can also be replaced by PropertySource
+	Properties    collection.MixedMap    // Properties -> map data-structure -> can also be replaced by PropertySource
 	ThrowLevel    int                    // 0: all 1:anyone
 }
 
@@ -107,14 +107,14 @@ func (opts *Options) validate() {
 type PropertySources = []PropertySource
 
 type PropertySource struct {
-	ordered.Ordered                   // declare ordered
-	Priority        int64             // the of priority of the PropertySource.
-	Property        string            // the name of the PropertySource.
-	FilePath        string            // the path of config file. -> e.g.: /opt/data | /opt/configs
-	Name            string            // the name of config file. -> e.g.: config.yaml | config.yml config.toml
-	Suffix          string            // the suffix of config file -> Name == config Suffix == yml -> Full name == config.yml
-	Type            reflect.Type      // the type of PropertySource, only support map now. // or string ?
-	Map             collection.AnyMap // the map context, when the Type is map.
+	ordered.Ordered                     // declare ordered
+	Priority        int64               // the of priority of the PropertySource.
+	Property        string              // the name of the PropertySource.
+	FilePath        string              // the path of config file. -> e.g.: /opt/data | /opt/configs
+	Name            string              // the name of config file. -> e.g.: config.yaml | config.yml config.toml
+	Suffix          string              // the suffix of config file -> Name == config Suffix == yml -> Full name == config.yml
+	Type            reflect.Type        // the type of PropertySource, only support map now. // or string ?
+	Map             collection.MixedMap // the map context, when the Type is map.
 }
 
 // Order | the priority value of PropertySource sort.
@@ -130,7 +130,7 @@ type Environment interface {
 	Start(opts ...Option) error
 	Destroy() error
 	Refresh(opts ...Option) error
-	LoadMap(sourceMap collection.AnyMap) error
+	LoadMap(sourceMap collection.MixedMap) error
 	LoadPropertySource(sources ...PropertySource) error
 	Get(key string) (any, bool)
 	NestedGet(key string) (any, bool)
@@ -146,7 +146,7 @@ type Environment interface {
 // ----------------------------------------------------------------
 
 type StandardEnvironment struct {
-	configMap       collection.AnyMap      // core config container
+	configMap       collection.MixedMap    // core config container
 	propertySources []PropertySource       // config sources
 	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
 }
@@ -155,7 +155,7 @@ type StandardEnvironment struct {
 
 func New(sources ...PropertySource) Environment {
 	return &StandardEnvironment{
-		configMap:       make(collection.AnyMap),
+		configMap:       make(collection.MixedMap),
 		propertySources: sources,
 		profiles:        make(collection.StringSlice, 0),
 	}
@@ -207,7 +207,7 @@ func (e *StandardEnvironment) Refresh(opts ...Option) error {
 	return e.Start(opts...)
 }
 
-func (e *StandardEnvironment) LoadMap(sourceMap collection.AnyMap) error {
+func (e *StandardEnvironment) LoadMap(sourceMap collection.MixedMap) error {
 	return nil
 }
 
@@ -275,7 +275,7 @@ func (e *StandardEnvironment) onLoad() error {
 }
 
 func (e *StandardEnvironment) loadSystemEnvVars() {
-	envVars := make(collection.AnyMap)
+	envVars := make(collection.MixedMap)
 
 	for _, env := range os.Environ() {
 		pair := strings.SplitN(env, EvnSeparator, EvnValidLength) // k=v -> 2
@@ -306,20 +306,20 @@ func postParse(env string) {
 	}
 }
 
-func initSystemEnvPropertySource(envVars collection.AnyMap) PropertySource {
+func initSystemEnvPropertySource(envVars collection.MixedMap) PropertySource {
 	return PropertySource{
 		Priority: ordered.HighPriority,
 		Property: DefaultSystemPropertySourceName,
-		Type:     reflect.TypeOf(collection.AnyMap{}),
+		Type:     reflect.TypeOf(collection.MixedMap{}),
 		Map:      envVars,
 	}
 }
 
-func (e *StandardEnvironment) loadSystemEnvMap(envVars collection.AnyMap) {
+func (e *StandardEnvironment) loadSystemEnvMap(envVars collection.MixedMap) {
 	e.loadSystemEnvMapDelayed(envVars)
 }
 
-func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.AnyMap) {
+func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.MixedMap) {
 	envPs := initSystemEnvPropertySource(envVars)
 	e.propertySources = append(e.propertySources, envPs)
 }
@@ -366,7 +366,7 @@ func WithSources(sources ...PropertySource) Option {
 	}
 }
 
-func WithProperties(properties collection.AnyMap) Option {
+func WithProperties(properties collection.MixedMap) Option {
 	return func(opts *Options) {
 		opts.Properties = properties
 	}
@@ -397,6 +397,6 @@ func newOptions() *Options {
 		SearchPaths:   make(collection.StringSlice, 0),
 		Profiles:      make(collection.StringSlice, 0),
 		Sources:       make(PropertySources, 0),
-		Properties:    make(collection.AnyMap),
+		Properties:    make(collection.MixedMap),
 	}
 }

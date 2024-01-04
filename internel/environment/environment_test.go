@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			want: &StandardEnvironment{
-				configMap: make(collection.AnyMap),
+				configMap: make(collection.MixedMap),
 				propertySources: []PropertySource{
 					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
@@ -101,11 +101,11 @@ func TestNewStandardEnvironmentEvent(t *testing.T) {
 
 func TestStandardEnvironment_Start(t *testing.T) {
 
-	properties := make(collection.AnyMap)
+	properties := make(collection.MixedMap)
 	properties["hello"] = "world"
 
 	type fields struct {
-		configMap       collection.AnyMap
+		configMap       collection.MixedMap
 		propertySources []PropertySource
 		profiles        collection.StringSlice
 	}
@@ -121,7 +121,7 @@ func TestStandardEnvironment_Start(t *testing.T) {
 		{
 			name: "environment#Start",
 			fields: fields{
-				configMap: make(collection.AnyMap),
+				configMap: make(collection.MixedMap),
 				propertySources: []PropertySource{
 					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},

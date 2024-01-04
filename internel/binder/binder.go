@@ -41,11 +41,11 @@ func NewBinder(prefix string) *Binder {
 	return &Binder{Prefix: prefix}
 }
 
-func (b *Binder) DefaultBind(target any, ctx collection.AnyMap) {
+func (b *Binder) DefaultBind(target any, ctx collection.MixedMap) {
 	b.Bind(b.Prefix, target, ctx)
 }
 
-func (b *Binder) Bind(prefix string, target any, ctx collection.AnyMap) {
+func (b *Binder) Bind(prefix string, target any, ctx collection.MixedMap) {
 	if stringz.IsNotBlankString(prefix) && stringz.IsNotSuffix(prefix, stringz.Dot) {
 		prefix += stringz.Dot
 	}
