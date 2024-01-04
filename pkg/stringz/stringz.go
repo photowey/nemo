@@ -35,7 +35,7 @@ func IsNotSuffix(source, suffix string) bool {
 }
 
 func IsBlankString(str string) bool {
-	return EmptyString == str
+	return EmptyString == str || EmptyString == strings.TrimSpace(str)
 }
 
 func IsNotBlankString(str string) bool {
@@ -52,6 +52,10 @@ func ArrayContains(haystack []string, needle string) bool {
 	}
 
 	return false
+}
+
+func ArrayNotContains(haystack []string, needle string) bool {
+	return !ArrayContains(haystack, needle)
 }
 
 func CloneSlice(src []string) []string {
