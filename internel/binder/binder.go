@@ -23,7 +23,6 @@ import (
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/stringz"
-	"github.com/photowey/nemo/pkg/valuez"
 )
 
 const (
@@ -66,9 +65,7 @@ func (b *Binder) Bind(prefix string, target any, ctx collection.AnyMap) {
 			b.Bind(key, sub, ctx)
 			v.Set(reflect.ValueOf(sub).Elem())
 		} else {
-			value := mapz.NestedGet(ctx, key)
-
-			if valuez.IsNotNil(value) {
+			if value, ok := mapz.NestedGet(ctx, key); ok {
 				v.Set(reflect.ValueOf(value).Convert(t.Type))
 			}
 		}

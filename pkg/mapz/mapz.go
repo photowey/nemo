@@ -23,21 +23,47 @@ import (
 	"github.com/photowey/nemo/pkg/stringz"
 )
 
-func NestedGet(ctx collection.AnyMap, key string) any {
+func NestedGet(ctx collection.AnyMap, key string) (any, bool) {
 	keys := strings.Split(key, stringz.Dot)
+	current := ctx
 
-	for _, k := range keys {
-		if value, ok := ctx[k]; ok {
-			switch v := value.(type) {
-			case collection.AnyMap:
-				ctx = v
-			default:
-				return value
+	for i, k := range keys {
+		value, ok := current[k]
+		if !ok {
+			if i == len(keys)-1 {
+				return current, true
 			}
-		} else {
-			return nil
+			return nil, false
 		}
+
+		next, ok := value.(collection.AnyMap)
+		if !ok {
+			if i == len(keys)-1 {
+				return value, true
+			}
+			return nil, false
+		}
+
+		current = next
 	}
 
-	return nil
+	return current, true
+}
+
+func NestedSet(ctx collection.AnyMap, key string, value any) {
+	keys := strings.Split(key, stringz.Dot)
+	lastKey := keys[len(keys)-1]
+	keys = keys[:len(keys)-1]
+
+	current := ctx
+	for _, k := range keys {
+		next, ok := current[k].(collection.AnyMap)
+		if !ok {
+			next = make(collection.AnyMap)
+			current[k] = next
+		}
+		current = next
+	}
+
+	current[lastKey] = value
 }
