@@ -42,6 +42,18 @@ const (
 )
 
 var (
+	NoneSuccessThreshold   = SuccessThreshold(0)
+	AnyoneSuccessThreshold = SuccessThreshold(1)
+	AllSuccessThreshold    = SuccessThreshold(2)
+)
+
+type SuccessThreshold int
+
+func (st SuccessThreshold) Int() int {
+	return int(st)
+}
+
+var (
 	_ eventbus.Event = (*StandardEnvironmentEvent)(nil)
 )
 
@@ -98,7 +110,7 @@ type Options struct {
 	Profiles      collection.StringSlice // dev | test | prod | ...
 	Sources       PropertySources        // PropertySource
 	Properties    collection.MixedMap    // Properties -> map data-structure -> can also be replaced by PropertySource
-	ThrowLevel    int                    // 0: all 1:anyone
+	Threshold     SuccessThreshold       // the allow count of config files successfully loaded
 }
 
 func (opts *Options) validate() (err error) {
@@ -124,7 +136,7 @@ func (opts *Options) validate() (err error) {
 	if err = validateProperties(opts.Properties); err != nil {
 		return
 	}
-	if err = validateThrowLevel(opts.ThrowLevel); err != nil {
+	if err = validateThreshold(opts.Threshold); err != nil {
 		return
 	}
 
@@ -179,8 +191,7 @@ func validateProperties(properties collection.MixedMap) error {
 	return nil
 }
 
-func validateThrowLevel(throwLevel int) error {
-	// 0 || 1 ?
+func validateThreshold(threshold SuccessThreshold) error {
 	return nil
 }
 
