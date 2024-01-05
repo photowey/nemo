@@ -17,6 +17,7 @@
 package environment
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -45,9 +46,11 @@ var (
 )
 
 var (
-	confusedEnvironments = collection.StringSlice{
-		"::",
-	}
+	supportedConfigTypes = stringz.InitStringSlice("yaml", "yml", "toml", "properties")
+)
+
+var (
+	confusedEnvironments = stringz.InitStringSlice("::")
 )
 
 // ----------------------------------------------------------------
@@ -98,8 +101,87 @@ type Options struct {
 	ThrowLevel    int                    // 0: all 1:anyone
 }
 
-func (opts *Options) validate() {
-	// validate options?
+func (opts *Options) validate() (err error) {
+	if err = validateAbsolutePaths(opts.AbsolutePaths); err != nil {
+		return
+	}
+	if err = validateConfigNames(opts.ConfigNames); err != nil {
+		return
+	}
+	if err = validateConfigTypes(opts.ConfigTypes); err != nil {
+		return
+	}
+	if err = validateSearchPaths(opts.SearchPaths); err != nil {
+		return
+	}
+	if err = validateProfiles(opts.Profiles); err != nil {
+		return
+
+	}
+	if err = validateSources(opts.Sources); err != nil {
+		return
+	}
+	if err = validateProperties(opts.Properties); err != nil {
+		return
+	}
+	if err = validateThrowLevel(opts.ThrowLevel); err != nil {
+		return
+	}
+
+	return
+}
+
+func validateAbsolutePaths(absolutePaths collection.StringSlice) error {
+	// check: absolute path?
+	return nil
+}
+
+func validateConfigNames(configNames collection.StringSlice) error {
+	return nil
+}
+
+func validateConfigTypes(configTypes collection.StringSlice) error {
+	for _, configType := range configTypes {
+		if stringz.ArrayNotContains(supportedConfigTypes, configType) {
+			return fmt.Errorf("nemo: config type:[%s] not supported", configType)
+		}
+	}
+
+	return nil
+}
+
+func validateSearchPaths(searchPaths collection.StringSlice) error {
+	return nil
+}
+
+func validateProfiles(profiles collection.StringSlice) error {
+	return nil
+}
+
+func validateSources(sources PropertySources) error {
+	for _, source := range sources {
+		if source.IsEmptySource() {
+			return fmt.Errorf("nemo: the property source can't be empty")
+		}
+		if source.IsMapSource() {
+			if len(source.Map) == 0 {
+				return fmt.Errorf("nemo: the map type of property source can't be empty")
+			}
+		}
+
+		// otherwise ?
+	}
+
+	return nil
+}
+
+func validateProperties(properties collection.MixedMap) error {
+	return nil
+}
+
+func validateThrowLevel(throwLevel int) error {
+	// 0 || 1 ?
+	return nil
 }
 
 // ----------------------------------------------------------------
@@ -122,6 +204,36 @@ type PropertySource struct {
 // The smaller the value, the higher the priority.
 func (ps PropertySource) Order() int64 {
 	return ps.Priority
+}
+
+func (ps PropertySource) IsMapSource() bool {
+	if ps.Type != nil && ps.Type.Kind() == reflect.Map {
+		return true
+	}
+
+	return false
+}
+
+func (ps PropertySource) IsFileSource() bool {
+	if ps.IsMapSource() {
+		return false
+	}
+
+	if stringz.IsBlankString(ps.FilePath) &&
+		stringz.IsBlankString(ps.Name) &&
+		stringz.IsBlankString(ps.Suffix) {
+		return false
+	}
+
+	return true
+}
+
+func (ps PropertySource) IsEmptySource() bool {
+	if ps.IsMapSource() || ps.IsFileSource() {
+		return false
+	}
+
+	return true
 }
 
 // ----------------------------------------------------------------
@@ -164,29 +276,33 @@ func New(sources ...PropertySource) Environment {
 // ----------------------------------------------------------------
 
 func (e *StandardEnvironment) Start(opts ...Option) error {
-	optz := initOptions(opts...)
+	optz, err := initOptions(opts...)
+	if err != nil {
+		return err
+	}
+
 	e.translateToPropertySources(optz)
 
 	// prepare
 	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
-	if err := eventbus.Post(eventPrepare); err != nil {
+	if err = eventbus.Post(eventPrepare); err != nil {
 		return nil
 	}
 
 	// pre load
 	preLoadEvent := NewStandardEnvironmentEvent(PreLoadEnvironmentEventName, e)
-	if err := eventbus.Post(preLoadEvent); err != nil {
+	if err = eventbus.Post(preLoadEvent); err != nil {
 		return nil
 	}
 
 	// on load
-	if err := e.onLoad(); err != nil {
+	if err = e.onLoad(); err != nil {
 		return nil
 	}
 
 	// post load
 	postLoadEvent := NewStandardEnvironmentEvent(PostLoadEnvironmentEventName, e)
-	if err := eventbus.Post(postLoadEvent); err != nil {
+	if err = eventbus.Post(postLoadEvent); err != nil {
 		return nil
 	}
 
@@ -219,7 +335,7 @@ func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) erro
 			}
 		}
 
-		if source.Type != nil && source.Type.Kind() == reflect.Map {
+		if source.IsMapSource() {
 			if err := e.LoadMap(source.Map); err != nil {
 				return err
 			}
@@ -374,19 +490,21 @@ func WithProperties(properties collection.MixedMap) Option {
 
 // ----------------------------------------------------------------
 
-func initOptions(opts ...Option) *Options {
+func initOptions(opts ...Option) (*Options, error) {
 	options := newOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	populateIfNecessary(options)
+	if err := populateIfNecessary(options); err != nil {
+		return nil, err
+	}
 
-	return options
+	return options, nil
 }
 
-func populateIfNecessary(opts *Options) {
-	opts.validate()
+func populateIfNecessary(opts *Options) error {
+	return opts.validate()
 }
 
 func newOptions() *Options {
