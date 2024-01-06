@@ -67,3 +67,29 @@ func NestedSet(ctx collection.MixedMap, key string, value any) {
 
 	current[lastKey] = value
 }
+
+func MergeMixedMaps(target collection.MixedMap, source collection.MixedMap) {
+	for key, sourceValue := range source {
+		targetValue, exists := target[key]
+
+		if exists {
+			if IsMixedMap(targetValue) && IsMixedMap(sourceValue) {
+				MergeMixedMaps(targetValue.(collection.MixedMap), sourceValue.(collection.MixedMap))
+			} else {
+				target[key] = sourceValue
+			}
+		} else {
+			target[key] = sourceValue
+		}
+	}
+}
+
+func IsMap[K comparable, V any](src any) bool {
+	_, ok := src.(map[K]V)
+	return ok
+}
+
+func IsMixedMap(src any) bool {
+	_, ok := src.(collection.MixedMap)
+	return ok
+}

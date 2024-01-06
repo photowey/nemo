@@ -24,6 +24,7 @@ import (
 
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
 )
@@ -42,7 +43,7 @@ const (
 )
 
 var (
-	NoneSuccessThreshold   = SuccessThreshold(0)
+	NoneSuccessThreshold   = SuccessThreshold(0) // default threshold
 	AnyoneSuccessThreshold = SuccessThreshold(1)
 	AllSuccessThreshold    = SuccessThreshold(2)
 )
@@ -154,7 +155,7 @@ func validateConfigNames(configNames collection.StringSlice) error {
 
 func validateConfigTypes(configTypes collection.StringSlice) error {
 	for _, configType := range configTypes {
-		if stringz.ArrayNotContains(supportedConfigTypes, configType) {
+		if collection.ArrayNotContains(supportedConfigTypes, configType) {
 			return fmt.Errorf("nemo: config type:[%s] not supported", configType)
 		}
 	}
@@ -260,6 +261,8 @@ type Environment interface {
 	Set(key string, value any) bool
 	NestedSet(key string, value any) bool
 	Contains(key string) bool
+	ActiveProfiles() collection.StringSlice
+	ActiveProfilesString() string
 }
 
 // ----------------------------------------------------------------
@@ -272,6 +275,7 @@ type StandardEnvironment struct {
 	configMap       collection.MixedMap    // core config container
 	propertySources []PropertySource       // config sources
 	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
+	threshold       SuccessThreshold
 }
 
 // ----------------------------------------------------------------
@@ -281,6 +285,7 @@ func New(sources ...PropertySource) Environment {
 		configMap:       make(collection.MixedMap),
 		propertySources: sources,
 		profiles:        make(collection.StringSlice, 0),
+		threshold:       NoneSuccessThreshold, // default threshold
 	}
 }
 
@@ -318,10 +323,6 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	}
 
 	return nil
-}
-
-func (e *StandardEnvironment) translateToPropertySources(opts *Options) {
-
 }
 
 func (e *StandardEnvironment) Destroy() error {
@@ -376,12 +377,48 @@ func (e *StandardEnvironment) Contains(key string) bool {
 	return true
 }
 
+func (e *StandardEnvironment) ActiveProfiles() collection.StringSlice {
+	return e.profiles
+}
+
+func (e *StandardEnvironment) ActiveProfilesString() string {
+	return stringz.Implode(e.profiles, stringz.SymbolComma)
+}
+
+// ----------------------------------------------------------------
+
 func (e *StandardEnvironment) setProperty(key string, value any) bool {
 	return true
 }
 
 func (e *StandardEnvironment) getProperty(key string) (any, bool) {
 	return nil, true
+}
+
+func (e *StandardEnvironment) mergeMap(ctx collection.MixedMap) {
+	if collection.IsEmptyMap(ctx) {
+		return
+	}
+
+	mapz.MergeMixedMaps(e.configMap, ctx)
+}
+
+func (e *StandardEnvironment) translateToPropertySources(opts *Options) {
+	e.translateSources(opts)
+	e.translateProfiles(opts)
+	e.translateProperties(opts)
+}
+
+func (e *StandardEnvironment) translateSources(opts *Options) {
+	e.propertySources = append(e.propertySources, opts.Sources...)
+}
+
+func (e *StandardEnvironment) translateProfiles(opts *Options) {
+	e.profiles = append(e.profiles, opts.Profiles...)
+}
+
+func (e *StandardEnvironment) translateProperties(opts *Options) {
+	e.mergeMap(opts.Properties)
 }
 
 // ----------------------------------------------------------------
@@ -427,7 +464,7 @@ func postParse(env string) {
 		}
 	}
 
-	if stringz.ArrayContains(confusedEnvironments, env) {
+	if collection.ArrayContains(confusedEnvironments, env) {
 		confusedEvent := eventbus.NewStandardAnyEvent(ConfusedEnvironmentEventName, env)
 		_ = eventbus.Post(confusedEvent)
 	}

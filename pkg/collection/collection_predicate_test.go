@@ -149,14 +149,14 @@ func TestIsEmptyMap(t *testing.T) {
 
 	int64Tests := []testCase[string, int64]{
 		{
-			name: "collection#IsEmptyMap_true",
+			name: "collection#IsEmptyMap_int64_true",
 			args: args[string, int64]{
 				src: map[string]int64{},
 			},
 			want: true,
 		},
 		{
-			name: "collection#IsEmptyMap_false",
+			name: "collection#IsEmptyMap_int64_false",
 			args: args[string, int64]{
 				src: map[string]int64{
 					"a": int64(10086),
@@ -213,14 +213,14 @@ func TestIsEmptySlice(t *testing.T) {
 
 	int64Tests := []testCase[int64]{
 		{
-			name: "collection#IsNotEmptySlice_true",
+			name: "collection#IsNotEmptySlice_int64_true",
 			args: args[int64]{
 				src: []int64{},
 			},
 			want: true,
 		},
 		{
-			name: "collection#IsNotEmptySlice_false",
+			name: "collection#IsNotEmptySlice_int64_false",
 			args: args[int64]{
 				src: []int64{
 					int64(10086),
@@ -276,7 +276,7 @@ func TestIsNotEmptyMap(t *testing.T) {
 
 	int64tests := []testCase[string, int64]{
 		{
-			name: "collection#IsNotEmptyMap_true",
+			name: "collection#IsNotEmptyMap_int64_true",
 			args: args[string, int64]{
 				src: map[string]int64{
 					"a": int64(10086),
@@ -285,7 +285,7 @@ func TestIsNotEmptyMap(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "collection#IsNotEmptyMap_false",
+			name: "collection#IsNotEmptyMap_int64_false",
 			args: args[string, int64]{
 				src: map[string]int64{},
 			},
@@ -338,7 +338,7 @@ func TestIsNotEmptySlice(t *testing.T) {
 	}
 	int64Tests := []testCase[int64]{
 		{
-			name: "collection#IsNotEmptySlice_true",
+			name: "collection#IsNotEmptySlice_int64_true",
 			args: args[int64]{
 				src: []int64{
 					int64(10086),
@@ -347,7 +347,7 @@ func TestIsNotEmptySlice(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "collection#IsNotEmptySlice_false",
+			name: "collection#IsNotEmptySlice_int64_false",
 			args: args[int64]{
 				src: []int64{},
 			},

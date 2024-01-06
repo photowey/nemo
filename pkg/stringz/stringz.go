@@ -24,6 +24,7 @@ import (
 const (
 	Dot         = "."
 	EmptyString = ""
+	SymbolComma = ","
 )
 
 func HasSuffix(source, suffix string) bool {
@@ -43,27 +44,6 @@ func IsNotBlankString(str string) bool {
 }
 
 // ----------------------------------------------------------------
-
-func ArrayContains(haystack []string, needle string) bool {
-	for _, a := range haystack {
-		if strings.EqualFold(a, needle) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func ArrayNotContains(haystack []string, needle string) bool {
-	return !ArrayContains(haystack, needle)
-}
-
-func CloneSlice(src []string) []string {
-	dst := make([]string, len(src))
-	copy(dst, src)
-
-	return dst
-}
 
 func Implode(haystack []string, separator string) string {
 	if len(haystack) == 0 {
@@ -108,7 +88,7 @@ func Format(sources ...string) string {
 }
 
 func Concat(sources ...string) string {
-	return Join("", sources...)
+	return Join(EmptyString, sources...)
 }
 
 func Join(separator string, sources ...string) string {
