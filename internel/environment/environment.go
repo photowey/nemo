@@ -258,8 +258,8 @@ type Environment interface {
 	LoadPropertySource(sources ...PropertySource) error
 	Get(key string) (any, bool)
 	NestedGet(key string) (any, bool)
-	Set(key string, value any) bool
-	NestedSet(key string, value any) bool
+	Set(key string, value any)
+	NestedSet(key string, value any)
 	Contains(key string) bool
 	ActiveProfiles() collection.StringSlice
 	ActiveProfilesString() string
@@ -336,6 +336,8 @@ func (e *StandardEnvironment) Refresh(opts ...Option) error {
 }
 
 func (e *StandardEnvironment) LoadMap(sourceMap collection.MixedMap) error {
+	e.mergeMap(sourceMap)
+
 	return nil
 }
 
@@ -362,15 +364,15 @@ func (e *StandardEnvironment) Get(key string) (any, bool) {
 }
 
 func (e *StandardEnvironment) NestedGet(key string) (any, bool) {
-	return nil, true
+	return e.getProperty(key)
 }
 
-func (e *StandardEnvironment) Set(key string, value any) bool {
-	return e.setProperty(key, value)
+func (e *StandardEnvironment) Set(key string, value any) {
+	e.setProperty(key, value)
 }
 
-func (e *StandardEnvironment) NestedSet(key string, value any) bool {
-	return true
+func (e *StandardEnvironment) NestedSet(key string, value any) {
+	e.setProperty(key, value)
 }
 
 func (e *StandardEnvironment) Contains(key string) bool {
@@ -387,12 +389,12 @@ func (e *StandardEnvironment) ActiveProfilesString() string {
 
 // ----------------------------------------------------------------
 
-func (e *StandardEnvironment) setProperty(key string, value any) bool {
-	return true
+func (e *StandardEnvironment) setProperty(key string, value any) {
+	mapz.NestedSet(e.configMap, key, value)
 }
 
 func (e *StandardEnvironment) getProperty(key string) (any, bool) {
-	return nil, true
+	return mapz.NestedGet(e.configMap, key)
 }
 
 func (e *StandardEnvironment) mergeMap(ctx collection.MixedMap) {
