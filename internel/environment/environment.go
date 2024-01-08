@@ -36,6 +36,25 @@ const (
 	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
 )
 
+type ActiveProfile string
+
+func (p ActiveProfile) String() string {
+	return string(p)
+}
+
+const (
+	DevActiveProfile         = ActiveProfile("dev")
+	TestActiveProfile        = ActiveProfile("test")
+	ProdActiveProfile        = ActiveProfile("prod")
+	StagingActiveProfile     = ActiveProfile("staging")
+	IntegrationActiveProfile = ActiveProfile("integration")
+	DemoActiveProfile        = ActiveProfile("demo")
+	PreActiveProfile         = ActiveProfile("pre")
+	TrainingActiveProfile    = ActiveProfile("training")
+	BackupActiveProfile      = ActiveProfile("backup")
+	DefaultActiveProfile     = ActiveProfile("default")
+)
+
 const (
 	DefaultSystemPropertySourceName = "os.env"
 	EvnSeparator                    = "="
@@ -417,6 +436,11 @@ func (e *StandardEnvironment) translateSources(opts *Options) {
 
 func (e *StandardEnvironment) translateProfiles(opts *Options) {
 	e.profiles = append(e.profiles, opts.Profiles...)
+
+	// default profile active.
+	if collection.IsEmptySlice(e.profiles) {
+		e.profiles = append(e.profiles, DefaultActiveProfile.String())
+	}
 }
 
 func (e *StandardEnvironment) translateProperties(opts *Options) {
