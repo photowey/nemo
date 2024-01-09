@@ -212,6 +212,11 @@ func validateProperties(properties collection.MixedMap) error {
 }
 
 func validateThreshold(threshold SuccessThreshold) error {
+	th := threshold.Int()
+	if th < 0 || th > 2 {
+		return fmt.Errorf("nemo: invalid threshold:[%d]", th)
+	}
+
 	return nil
 }
 
