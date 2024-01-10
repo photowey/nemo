@@ -19,6 +19,7 @@ package environment
 import (
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 	"strings"
 
@@ -164,7 +165,14 @@ func (opts *Options) validate() (err error) {
 }
 
 func validateAbsolutePaths(absolutePaths collection.StringSlice) error {
-	// check: absolute path?
+	for _, absolutePath := range absolutePaths {
+		if stringz.IsNotBlankString(absolutePath) {
+			if ok := path.IsAbs(absolutePath); !ok {
+				return fmt.Errorf("nemo: the candidate path:[%s] is not absolute path", absolutePath)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -197,11 +205,9 @@ func validateSources(sources PropertySources) error {
 		}
 		if source.IsMapSource() {
 			if len(source.Map) == 0 {
-				return fmt.Errorf("nemo: the map type of property source can't be empty")
+				return fmt.Errorf("nemo: the `Map` of map property source can't be empty")
 			}
 		}
-
-		// otherwise ?
 	}
 
 	return nil
