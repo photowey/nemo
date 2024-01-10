@@ -23,21 +23,73 @@ import (
 	"github.com/photowey/nemo/pkg/stringz"
 )
 
-func NestedGet(ctx collection.AnyMap, key string) any {
+func NestedGet(ctx collection.MixedMap, key string) (any, bool) {
 	keys := strings.Split(key, stringz.Dot)
+	current := ctx
 
-	for _, k := range keys {
-		if value, ok := ctx[k]; ok {
-			switch v := value.(type) {
-			case collection.AnyMap:
-				ctx = v
-			default:
-				return value
+	for i, k := range keys {
+		value, ok := current[k]
+		if !ok {
+			if i == len(keys)-1 {
+				return current, true
 			}
-		} else {
-			return nil
+			return nil, false
 		}
+
+		next, ok := value.(collection.MixedMap)
+		if !ok {
+			if i == len(keys)-1 {
+				return value, true
+			}
+			return nil, false
+		}
+
+		current = next
 	}
 
-	return nil
+	return current, true
+}
+
+func NestedSet(ctx collection.MixedMap, key string, value any) {
+	keys := strings.Split(key, stringz.Dot)
+	lastKey := keys[len(keys)-1]
+	keys = keys[:len(keys)-1]
+
+	current := ctx
+	for _, k := range keys {
+		next, ok := current[k].(collection.MixedMap)
+		if !ok {
+			next = make(collection.MixedMap)
+			current[k] = next
+		}
+		current = next
+	}
+
+	current[lastKey] = value
+}
+
+func MergeMixedMaps(target collection.MixedMap, source collection.MixedMap) {
+	for key, sourceValue := range source {
+		targetValue, exists := target[key]
+
+		if exists {
+			if IsMixedMap(targetValue) && IsMixedMap(sourceValue) {
+				MergeMixedMaps(targetValue.(collection.MixedMap), sourceValue.(collection.MixedMap))
+			} else {
+				target[key] = sourceValue
+			}
+		} else {
+			target[key] = sourceValue
+		}
+	}
+}
+
+func IsMap[K comparable, V any](src any) bool {
+	_, ok := src.(map[K]V)
+	return ok
+}
+
+func IsMixedMap(src any) bool {
+	_, ok := src.(collection.MixedMap)
+	return ok
 }
