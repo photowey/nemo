@@ -58,6 +58,7 @@ const (
 
 const (
 	DefaultSystemPropertySourceName = "os.env"
+	DefaultOptionPropertySourceName = "opt.properties"
 	EvnSeparator                    = "="
 	EvnValidLength                  = 2
 )
@@ -455,7 +456,9 @@ func (e *StandardEnvironment) translateProfiles(opts *Options) {
 }
 
 func (e *StandardEnvironment) translateProperties(opts *Options) {
-	e.mergeMap(opts.Properties)
+	ps := initPropertySource(opts.Properties, ordered.DefaultPriority, DefaultOptionPropertySourceName)
+
+	e.propertySources = append(e.propertySources, ps)
 }
 
 // ----------------------------------------------------------------
@@ -508,11 +511,14 @@ func postParse(env string) {
 }
 
 func initSystemEnvPropertySource(envVars collection.MixedMap) PropertySource {
+	return initPropertySource(envVars, ordered.HighPriority, DefaultSystemPropertySourceName)
+}
+func initPropertySource(ctx collection.MixedMap, priority int64, property string) PropertySource {
 	return PropertySource{
-		Priority: ordered.HighPriority,
-		Property: DefaultSystemPropertySourceName,
+		Priority: priority,
+		Property: property,
 		Type:     reflect.TypeOf(collection.MixedMap{}),
-		Map:      envVars,
+		Map:      ctx,
 	}
 }
 
