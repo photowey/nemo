@@ -302,3 +302,159 @@ func TestMergeMixedMaps(t *testing.T) {
 		})
 	}
 }
+
+func TestContains(t *testing.T) {
+	type args[K comparable, V any] struct {
+		key K
+		ctx map[K]V
+	}
+	type testCase[K comparable, V any] struct {
+		name string
+		args args[K, V]
+		want bool
+	}
+	tests := []testCase[string, string]{
+		{
+			name: "mapz#Contains_string_true",
+			args: args[string, string]{
+				key: "a",
+				ctx: map[string]string{
+					"a": "1",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#Contains_string_false",
+			args: args[string, string]{
+				key: "a.b",
+				ctx: map[string]string{
+					"b": "1",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#Contains_string_false",
+			args: args[string, string]{
+				key: "a",
+				ctx: map[string]string{
+					"b": "1",
+				},
+			},
+			want: false,
+		},
+	}
+
+	intTests := []testCase[string, int64]{
+		{
+			name: "mapz#Contains_int64_true",
+			args: args[string, int64]{
+				key: "a",
+				ctx: map[string]int64{
+					"a": int64(10086),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#Contains_int64_false",
+			args: args[string, int64]{
+				key: "a",
+				ctx: map[string]int64{
+					"b": int64(10086),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#Contains_int64_false",
+			args: args[string, int64]{
+				key: "a.b",
+				ctx: map[string]int64{
+					"b": int64(10086),
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Contains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range intTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Contains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNestedContains(t *testing.T) {
+	type args struct {
+		key string
+		ctx map[string]any
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "mapz#NestedContains_true",
+			args: args{
+				key: "a.b",
+				ctx: map[string]any{
+					"a": map[string]any{
+						"b": 1,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#NestedContains_false",
+			args: args{
+				key: "a.b",
+				ctx: map[string]any{
+					"a": map[string]any{},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#NestedContains_single_key_true",
+			args: args{
+				key: "a",
+				ctx: map[string]any{
+					"a": map[string]any{
+						"b": 1,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#NestedContains_single_key_false",
+			args: args{
+				key: "b",
+				ctx: map[string]any{
+					"a": map[string]any{},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NestedContains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("NestedContains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
