@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/mapz"
@@ -286,7 +287,7 @@ type Environment interface {
 	Destroy() error
 	Refresh(opts ...Option) error
 	LoadMap(sourceMap collection.MixedMap) error
-	LoadPropertySource(sources ...PropertySource) error
+	LoadPropertySources(sources ...PropertySource) error
 	Get(key string) (any, bool)
 	NestedGet(key string) (any, bool)
 	Set(key string, value any)
@@ -294,6 +295,7 @@ type Environment interface {
 	Contains(key string) bool
 	ActiveProfiles() collection.StringSlice
 	ActiveProfilesString() string
+	Bind(prefix string, target any) error
 }
 
 // ----------------------------------------------------------------
@@ -306,7 +308,8 @@ type StandardEnvironment struct {
 	configMap       collection.MixedMap    // core config container
 	propertySources []PropertySource       // config sources
 	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
-	threshold       SuccessThreshold
+	threshold       SuccessThreshold       // threshold
+	binder          *binder.Binder         // default binder
 }
 
 // ----------------------------------------------------------------
@@ -317,6 +320,7 @@ func New(sources ...PropertySource) Environment {
 		propertySources: sources,
 		profiles:        make(collection.StringSlice, 0),
 		threshold:       NoneSuccessThreshold, // default threshold
+		binder:          binder.New(),
 	}
 }
 
@@ -372,7 +376,7 @@ func (e *StandardEnvironment) LoadMap(sourceMap collection.MixedMap) error {
 	return nil
 }
 
-func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) error {
+func (e *StandardEnvironment) LoadPropertySources(sources ...PropertySource) error {
 	for _, source := range sources {
 		if stringz.IsNotBlankString(source.FilePath) {
 			if err := e.loadConfig(source.FilePath, source.Name, source.Type); err != nil {
@@ -407,7 +411,7 @@ func (e *StandardEnvironment) NestedSet(key string, value any) {
 }
 
 func (e *StandardEnvironment) Contains(key string) bool {
-	return true
+	return mapz.NestedContains(key, e.configMap)
 }
 
 func (e *StandardEnvironment) ActiveProfiles() collection.StringSlice {
@@ -416,6 +420,12 @@ func (e *StandardEnvironment) ActiveProfiles() collection.StringSlice {
 
 func (e *StandardEnvironment) ActiveProfilesString() string {
 	return stringz.Implode(e.profiles, stringz.SymbolComma)
+}
+
+func (e *StandardEnvironment) Bind(prefix string, target any) error {
+	e.binder.Bind(prefix, target, e.configMap)
+
+	return nil
 }
 
 // ----------------------------------------------------------------
@@ -469,10 +479,31 @@ func (e *StandardEnvironment) onLoad() error {
 	sorter := ordered.NewSorter(e.propertySources...)
 	ordered.Sort(sorter, -1)
 
+	th := e.threshold
+
+	okCounter := 0
+	errs := make([]error, 0)
+
 	for _, source := range e.propertySources {
-		if err := e.LoadPropertySource(source); err != nil {
-			return err
+		if err := e.LoadPropertySources(source); err != nil {
+			if AllSuccessThreshold.Int() == th.Int() {
+				return err
+			}
+			errs = append(errs, err)
+
+			continue
 		}
+
+		okCounter++
+	}
+
+	if AnyoneSuccessThreshold.Int() == th.Int() && okCounter == 0 {
+		sb := stringz.NewStringBuffer(len(errs))
+		for _, err := range errs {
+			sb.Append(err.Error())
+		}
+
+		return fmt.Errorf("nemo: failed to load the all property sources, messages:[%s]", sb.String())
 	}
 
 	return nil
