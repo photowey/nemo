@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
 )
@@ -54,6 +55,7 @@ func TestNew(t *testing.T) {
 					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
 				profiles: make(collection.StringSlice, 0),
+				binder:   binder.New(),
 			},
 		},
 	}
