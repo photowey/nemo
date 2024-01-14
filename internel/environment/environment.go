@@ -20,22 +20,17 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 
 	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/filez"
 	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
-)
-
-const (
-	PrepareEnvironmentEventName  = "nemo.environment.prepare.event"
-	PreLoadEnvironmentEventName  = "nemo.environment.load.pre.event"
-	PostLoadEnvironmentEventName = "nemo.environment.load.post.event"
-	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
 )
 
 type ActiveProfile string
@@ -58,10 +53,23 @@ const (
 )
 
 const (
+	PrepareEnvironmentEventName  = "nemo.environment.prepare.event"
+	PreLoadEnvironmentEventName  = "nemo.environment.load.pre.event"
+	PostLoadEnvironmentEventName = "nemo.environment.load.post.event"
+	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
+)
+
+const (
 	DefaultSystemPropertySourceName = "os.env"
 	DefaultOptionPropertySourceName = "opt.properties"
 	EvnSeparator                    = "="
 	EvnValidLength                  = 2
+)
+
+const (
+	AbsoluteFilePriority = ordered.HighPriority + 10*ordered.DefaultStep
+	AbsolutePathPriority = ordered.HighPriority + 20*ordered.DefaultStep
+	SearchPathPriority   = ordered.HighPriority + 30*ordered.DefaultStep
 )
 
 var (
@@ -82,6 +90,7 @@ var (
 
 var (
 	supportedConfigTypes = stringz.InitStringSlice("yaml", "yml", "toml", "properties")
+	defaultConfigNames   = stringz.InitStringSlice("ini", "conf", "config", "configs", "application")
 )
 
 var (
@@ -295,6 +304,7 @@ type Environment interface {
 	Contains(key string) bool
 	ActiveProfiles() collection.StringSlice
 	ActiveProfilesString() string
+	ActiveDefaultProfile() bool
 	Bind(prefix string, target any) error
 }
 
@@ -332,7 +342,10 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 		return err
 	}
 
-	e.translateToPropertySources(optz)
+	err = e.translateToPropertySources(optz)
+	if err != nil {
+		return err
+	}
 
 	// prepare
 	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
@@ -422,6 +435,10 @@ func (e *StandardEnvironment) ActiveProfilesString() string {
 	return stringz.Implode(e.profiles, stringz.SymbolComma)
 }
 
+func (e *StandardEnvironment) ActiveDefaultProfile() bool {
+	return collection.ArrayContains(e.profiles, DefaultActiveProfile.String())
+}
+
 func (e *StandardEnvironment) Bind(prefix string, target any) error {
 	e.binder.Bind(prefix, target, e.configMap)
 
@@ -446,18 +463,28 @@ func (e *StandardEnvironment) mergeMap(ctx collection.MixedMap) {
 	mapz.MergeMixedMaps(e.configMap, ctx)
 }
 
-func (e *StandardEnvironment) translateToPropertySources(opts *Options) {
+func (e *StandardEnvironment) translateToPropertySources(opts *Options) error {
 	e.translateSources(opts)
 	e.translateProfiles(opts)
 	e.translateProperties(opts)
+	err := e.translatePaths(opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (e *StandardEnvironment) translateSources(opts *Options) {
-	e.propertySources = append(e.propertySources, opts.Sources...)
+	if collection.IsNotEmptySlice(opts.Sources) {
+		e.propertySources = append(e.propertySources, opts.Sources...)
+	}
 }
 
 func (e *StandardEnvironment) translateProfiles(opts *Options) {
-	e.profiles = append(e.profiles, opts.Profiles...)
+	if collection.IsNotEmptySlice(opts.Profiles) {
+		e.profiles = append(e.profiles, opts.Profiles...)
+	}
 
 	// default profile active.
 	if collection.IsEmptySlice(e.profiles) {
@@ -467,6 +494,99 @@ func (e *StandardEnvironment) translateProfiles(opts *Options) {
 
 func (e *StandardEnvironment) translateProperties(opts *Options) {
 	ps := initPropertySource(opts.Properties, ordered.DefaultPriority, DefaultOptionPropertySourceName)
+
+	e.propertySources = append(e.propertySources, ps)
+}
+
+func (e *StandardEnvironment) translatePaths(opts *Options) error {
+	absolutePaths := opts.AbsolutePaths
+	for _, absolutePath := range absolutePaths {
+		e.translatePathToPropertySourceIfNecessary(AbsoluteFilePriority, AbsolutePathPriority, absolutePath, opts)
+	}
+
+	searchPaths := opts.SearchPaths
+	if collection.IsNotEmptySlice(searchPaths) {
+		for _, searchPath := range searchPaths {
+			abs, err := filez.ToAbsIfNecessary(searchPath)
+			if err != nil {
+				return nil
+			}
+			e.translatePathToPropertySourceIfNecessary(ordered.DefaultPriority, SearchPathPriority, abs, opts)
+		}
+	}
+
+	return nil
+}
+
+func (e *StandardEnvironment) translatePathToPropertySourceIfNecessary(filePriority, priority int64, abs string, opts *Options) {
+	if stringz.IsBlankString(abs) {
+		return
+	}
+
+	abs = filepath.Clean(abs)
+
+	if filez.IsFile(abs) {
+		e.translateFileToPropertySource(filePriority, abs)
+		return
+	}
+
+	configNames := opts.ConfigNames
+	if collection.IsEmptySlice(configNames) {
+		for _, configName := range defaultConfigNames {
+			if collection.ArrayNotContains(configNames, configName) {
+				configNames = append(configNames, configName)
+			}
+		}
+	}
+
+	configTypes := opts.ConfigTypes
+	if collection.IsEmptySlice(configTypes) {
+		// custom ?
+		for _, supportedConfigType := range supportedConfigTypes {
+			if collection.ArrayNotContains(configTypes, supportedConfigType) {
+				configTypes = append(configTypes, supportedConfigType)
+			}
+		}
+	}
+
+	for _, configName := range configNames {
+		file := filepath.Join(abs, configName)
+		file = filepath.Clean(file)
+
+		if filez.IsFile(file) {
+			e.translateFileToPropertySource(filePriority, file)
+
+			continue
+		}
+
+		for _, configType := range configTypes {
+			ps := PropertySource{
+				Priority: priority,
+				Property: abs,
+				FilePath: abs,
+				Name:     configName,
+				Suffix:   configType,
+			}
+
+			e.propertySources = append(e.propertySources, ps)
+		}
+	}
+}
+
+func (e *StandardEnvironment) translateFileToPropertySource(priority int64, abs string) {
+	abs = filepath.Clean(abs)
+
+	dir := filepath.Dir(abs)
+	fileName := filepath.Base(abs)
+	ext := filepath.Ext(fileName)
+
+	ps := PropertySource{
+		Priority: priority,
+		Property: abs,
+		FilePath: dir,
+		Name:     fileName,
+		Suffix:   ext,
+	}
 
 	e.propertySources = append(e.propertySources, ps)
 }
