@@ -18,7 +18,25 @@ package filez
 
 import (
 	"os"
+	"path/filepath"
 )
+
+func ToAbsIfNecessary(path string) (string, error) {
+	if IsAbs(path) {
+		return path, nil
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	return absPath, nil
+}
+
+func IsAbs(path string) bool {
+	return filepath.IsAbs(path)
+}
 
 func IsFile(path string) bool {
 	_, err := os.Stat(path)

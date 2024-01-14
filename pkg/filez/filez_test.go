@@ -17,6 +17,8 @@
 package filez
 
 import (
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -99,4 +101,60 @@ func TestIsFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToAbsIfNecessary(t *testing.T) {
+	testFile := determineTestSourceFilePath()
+	testdataDir := filepath.Dir(testFile)
+
+	absPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/application.yml"))
+
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "filez#ToAbsIfNecessary",
+			args: args{
+				path: "./testdata/application.yml",
+			},
+			want:    absPath,
+			wantErr: false,
+		},
+		{
+			name: "filez#ToAbsIfNecessary_abs",
+			args: args{
+				path: absPath,
+			},
+			want:    absPath,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ToAbsIfNecessary(tt.args.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ToAbsIfNecessary() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ToAbsIfNecessary() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func determineTestSourceFilePath() string {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("nemo: failed to get source file path")
+	}
+
+	return filename
 }
