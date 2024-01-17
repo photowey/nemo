@@ -22,37 +22,36 @@ import (
 	"github.com/photowey/nemo/pkg/stringz"
 )
 
-// xxx.yaml | xxx.yml
+// xxx.toml
 
 const (
-	Yaml = "yaml"
-	Yml  = "yml"
+	Toml = "toml"
 )
 
 const (
-	yamlStep     = 10
-	yamlPriority = ordered.HighPriority + yamlStep*ordered.DefaultStep
+	tomlStep     = 100
+	tomlPriority = ordered.HighPriority + tomlStep*ordered.DefaultStep
 )
 
 var (
-	ymlSupportedConfigTypes = stringz.InitStringSlice(Yaml, Yml)
+	tomlSupportedConfigTypes = stringz.InitStringSlice(Toml)
 )
 
 var (
-	_ ConfigLoader = (*YamlConfigLoader)(nil)
+	_ ConfigLoader = (*TomlConfigLoader)(nil)
 )
 
-type YamlConfigLoader struct {
+type TomlConfigLoader struct {
 }
 
-func (ycl *YamlConfigLoader) Supports(strategy string) bool {
-	return collection.ArrayContains(ymlSupportedConfigTypes, strategy)
+func (tcl *TomlConfigLoader) Supports(strategy string) bool {
+	return collection.ArrayContains(tomlSupportedConfigTypes, strategy)
 }
 
-func (ycl *YamlConfigLoader) Order() int64 {
-	return yamlPriority
+func (tcl *TomlConfigLoader) Order() int64 {
+	return tomlPriority
 }
 
-func (ycl *YamlConfigLoader) Load(path string, targetPtr any) {
+func (tcl *TomlConfigLoader) Load(path string, targetPtr any) {
 
 }
