@@ -17,6 +17,7 @@
 package mapz
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/photowey/nemo/pkg/stringz"
@@ -119,6 +120,46 @@ func NestedContains(key string, ctx map[string]any) bool {
 	}
 
 	return true
+}
+
+// ----------------------------------------------------------------
+
+func SortedKeys[V any](ctx map[string]V) []string {
+	keys := make([]string, 0, len(ctx))
+
+	for key := range ctx {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	return keys
+}
+
+func SortedValues[V any](ctx map[string]V) []V {
+	keys := SortedKeys(ctx)
+
+	values := make([]V, 0, len(keys))
+
+	for _, key := range keys {
+		values = append(values, ctx[key])
+	}
+
+	return values
+}
+
+// ----------------------------------------------------------------
+
+func Values[K comparable, V any](ctx map[K]V) []V {
+	values := make([]V, 0, len(ctx))
+
+	for _, value := range ctx {
+		values = append(values, value)
+	}
+
+	return values
 }
 
 // ----------------------------------------------------------------

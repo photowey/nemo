@@ -458,3 +458,107 @@ func TestNestedContains(t *testing.T) {
 		})
 	}
 }
+
+func TestSortedKeys(t *testing.T) {
+	type args[V any] struct {
+		ctx map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want []string
+	}
+	tests := []testCase[string]{
+		{
+			name: "mapz#SortedKeys_string",
+			args: args[string]{
+				ctx: map[string]string{
+					"a": "1",
+					"z": "3",
+					"b": "2",
+				},
+			},
+			want: []string{"a", "b", "z"},
+		},
+	}
+	int64Tests := []testCase[int64]{
+		{
+			name: "mapz#SortedKeys_int64",
+			args: args[int64]{
+				ctx: map[string]int64{
+					"a": int64(1),
+					"z": int64(3),
+					"b": int64(2),
+				},
+			},
+			want: []string{"a", "b", "z"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedKeys(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedKeys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range int64Tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedKeys(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedKeys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSortedValues(t *testing.T) {
+	type args[V any] struct {
+		ctx map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want []V
+	}
+	tests := []testCase[string]{
+		{
+			name: "mapz#SortedValues_string",
+			args: args[string]{
+				ctx: map[string]string{
+					"a": "1",
+					"z": "3",
+					"b": "2",
+				},
+			},
+			want: []string{"1", "2", "3"},
+		},
+	}
+	int64Tests := []testCase[int64]{
+		{
+			name: "mapz#SortedValues_int64",
+			args: args[int64]{
+				ctx: map[string]int64{
+					"a": int64(1),
+					"z": int64(3),
+					"b": int64(2),
+				},
+			},
+			want: []int64{int64(1), int64(2), int64(3)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedValues(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range int64Tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedValues(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
