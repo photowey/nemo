@@ -31,6 +31,7 @@ var (
 type Registry interface {
 	Register(loader ConfigLoader)
 	Contains(name string) bool
+	Loader(name string) (ConfigLoader, bool)
 	Loaders() []ConfigLoader
 }
 
@@ -47,6 +48,12 @@ func (r registry) Contains(name string) bool {
 	return ok
 }
 
+func (r registry) Loader(name string) (ConfigLoader, bool) {
+	v, ok := r.loaderMap[name]
+
+	return v, ok
+}
+
 func (r registry) Loaders() []ConfigLoader {
 	return mapz.Values[string, ConfigLoader](r.loaderMap)
 }
@@ -57,6 +64,12 @@ func Register(loader ConfigLoader) {
 
 func Contains(name string) bool {
 	return _registry.Contains(name)
+}
+
+func Loader(name string) (ConfigLoader, bool) {
+	v, ok := _registry.loaderMap[name]
+
+	return v, ok
 }
 
 func Loaders() []ConfigLoader {
