@@ -42,7 +42,15 @@ var (
 	_ ConfigLoader = (*YamlConfigLoader)(nil)
 )
 
+func init() {
+	Register(NewYamlConfigLoader())
+}
+
 type YamlConfigLoader struct {
+}
+
+func NewYamlConfigLoader() ConfigLoader {
+	return &YamlConfigLoader{}
 }
 
 func (ycl *YamlConfigLoader) Supports(strategy string) bool {
@@ -51,6 +59,10 @@ func (ycl *YamlConfigLoader) Supports(strategy string) bool {
 
 func (ycl *YamlConfigLoader) Order() int64 {
 	return yamlPriority
+}
+
+func (ycl *YamlConfigLoader) Name() string {
+	return Yaml
 }
 
 func (ycl *YamlConfigLoader) Load(path string, targetPtr any) {

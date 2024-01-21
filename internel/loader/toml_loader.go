@@ -41,7 +41,15 @@ var (
 	_ ConfigLoader = (*TomlConfigLoader)(nil)
 )
 
+func init() {
+	Register(NewTomlConfigLoader())
+}
+
 type TomlConfigLoader struct {
+}
+
+func NewTomlConfigLoader() ConfigLoader {
+	return &TomlConfigLoader{}
 }
 
 func (tcl *TomlConfigLoader) Supports(strategy string) bool {
@@ -50,6 +58,10 @@ func (tcl *TomlConfigLoader) Supports(strategy string) bool {
 
 func (tcl *TomlConfigLoader) Order() int64 {
 	return tomlPriority
+}
+
+func (tcl *TomlConfigLoader) Name() string {
+	return Toml
 }
 
 func (tcl *TomlConfigLoader) Load(path string, targetPtr any) {

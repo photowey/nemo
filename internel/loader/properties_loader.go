@@ -41,7 +41,15 @@ var (
 	_ ConfigLoader = (*PropertiesConfigLoader)(nil)
 )
 
+func init() {
+	Register(NewPropertiesConfigLoader())
+}
+
 type PropertiesConfigLoader struct {
+}
+
+func NewPropertiesConfigLoader() ConfigLoader {
+	return &PropertiesConfigLoader{}
 }
 
 func (pcl *PropertiesConfigLoader) Supports(strategy string) bool {
@@ -50,6 +58,10 @@ func (pcl *PropertiesConfigLoader) Supports(strategy string) bool {
 
 func (pcl *PropertiesConfigLoader) Order() int64 {
 	return propertiesPriority
+}
+
+func (pcl *PropertiesConfigLoader) Name() string {
+	return Properties
 }
 
 func (pcl *PropertiesConfigLoader) Load(path string, targetPtr any) {
