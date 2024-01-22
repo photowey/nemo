@@ -17,10 +17,18 @@
 package loader
 
 import (
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestYamlConfigLoader_Load(t *testing.T) {
+	testFile := determineTestSourceFilePath()
+	testdataDir := filepath.Dir(testFile)
+
+	absPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/application.yml"))
+	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/config.yml")) // not found
+
 	ctx := make(map[string]any)
 
 	type args struct {
@@ -35,7 +43,7 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 		{
 			name: "loader#yaml_ok",
 			args: args{
-				path:      "./testdata/application.yml",
+				path:      absPath,
 				targetPtr: &ctx,
 			},
 			wantErr: false,
@@ -43,7 +51,7 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 		{
 			name: "loader#yaml_failed",
 			args: args{
-				path:      "./testdata/config.yml", // not found
+				path:      badAbsPath,
 				targetPtr: &ctx,
 			},
 			wantErr: true,
@@ -58,4 +66,13 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 			}
 		})
 	}
+}
+
+func determineTestSourceFilePath() string {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("nemo: failed to get source file path")
+	}
+
+	return filename
 }
