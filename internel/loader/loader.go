@@ -25,5 +25,5 @@ type ConfigLoader interface {
 	ordered.Ordered
 	strategy.Supporter
 	Name() string
-	Load(path string, targetPtr any)
+	Load(path string, targetPtr any) error
 }

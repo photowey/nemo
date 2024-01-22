@@ -1,0 +1,8 @@
+﻿server:
+  port: 9527
+
+nemo:
+  application:
+    name: "nemoapp"
+  profiles:
+    active: "dev"

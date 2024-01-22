@@ -64,6 +64,6 @@ func (tcl *TomlConfigLoader) Name() string {
 	return Toml
 }
 
-func (tcl *TomlConfigLoader) Load(path string, targetPtr any) {
-
+func (tcl *TomlConfigLoader) Load(path string, targetPtr any) error {
+	return nil
 }

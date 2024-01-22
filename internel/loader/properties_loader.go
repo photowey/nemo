@@ -64,6 +64,6 @@ func (pcl *PropertiesConfigLoader) Name() string {
 	return Properties
 }
 
-func (pcl *PropertiesConfigLoader) Load(path string, targetPtr any) {
-
+func (pcl *PropertiesConfigLoader) Load(path string, targetPtr any) error {
+	return nil
 }

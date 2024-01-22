@@ -17,9 +17,12 @@
 package loader
 
 import (
+	"os"
+
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
+	"gopkg.in/yaml.v2"
 )
 
 // xxx.yaml | xxx.yml
@@ -47,24 +50,36 @@ func init() {
 }
 
 type YamlConfigLoader struct {
+	name     string
+	types    collection.StringSlice
+	priority int64
 }
 
 func NewYamlConfigLoader() ConfigLoader {
-	return &YamlConfigLoader{}
+	return &YamlConfigLoader{
+		name:     Yaml,
+		types:    ymlSupportedConfigTypes,
+		priority: yamlPriority,
+	}
 }
 
 func (ycl *YamlConfigLoader) Supports(strategy string) bool {
-	return collection.ArrayContains(ymlSupportedConfigTypes, strategy)
+	return collection.ArrayContains(ycl.types, strategy)
 }
 
 func (ycl *YamlConfigLoader) Order() int64 {
-	return yamlPriority
+	return ycl.priority
 }
 
 func (ycl *YamlConfigLoader) Name() string {
-	return Yaml
+	return ycl.name
 }
 
-func (ycl *YamlConfigLoader) Load(path string, targetPtr any) {
+func (ycl *YamlConfigLoader) Load(path string, targetPtr any) error {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
 
+	return yaml.Unmarshal(bytes, targetPtr)
 }
