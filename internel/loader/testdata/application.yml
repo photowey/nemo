@@ -6,3 +6,17 @@ nemo:
     name: "nemoapp"
   profiles:
     active: "dev"
+  datasource:
+    driver: "mysql"
+    host: "192.168.1.10"
+    port: 3306
+    username: "root"
+    password: "root"
+    database: "nemo"
+  rabbitmq:
+    enabled: true
+    host: "192.168.1.11"
+    port: 5672
+    username: "nemo"
+    password: "nemo"
+    vhost: "vhost_admin"

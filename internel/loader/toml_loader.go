@@ -17,6 +17,7 @@
 package loader
 
 import (
+	"github.com/BurntSushi/toml"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
@@ -65,5 +66,7 @@ func (tcl *TomlConfigLoader) Name() string {
 }
 
 func (tcl *TomlConfigLoader) Load(path string, targetPtr any) error {
-	return nil
+	_, err := toml.DecodeFile(path, targetPtr)
+
+	return err
 }
