@@ -8,11 +8,11 @@ nemo:
     active: "dev"
   datasource:
     driver: "mysql"
+    database: "nemo"
     host: "192.168.1.10"
     port: 3306
     username: "root"
     password: "root"
-    database: "nemo"
   rabbitmq:
     enabled: true
     host: "192.168.1.11"

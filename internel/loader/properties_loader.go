@@ -17,6 +17,8 @@
 package loader
 
 import (
+	"github.com/magiconair/properties"
+	"github.com/mitchellh/mapstructure"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
@@ -65,5 +67,16 @@ func (pcl *PropertiesConfigLoader) Name() string {
 }
 
 func (pcl *PropertiesConfigLoader) Load(path string, targetPtr any) error {
-	return nil
+	ppt, err := properties.LoadFile(path, properties.UTF8)
+	if err != nil {
+		return err
+	}
+
+	ctx := make(map[string]any)
+	for _, key := range ppt.Keys() {
+		value, _ := ppt.Get(key)
+		ctx[key] = value
+	}
+
+	return mapstructure.Decode(ctx, targetPtr)
 }
