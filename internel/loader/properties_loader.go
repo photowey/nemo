@@ -17,11 +17,14 @@
 package loader
 
 import (
+	"fmt"
+
 	"github.com/magiconair/properties"
 	"github.com/mitchellh/mapstructure"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
+	"github.com/photowey/nemo/pkg/valuez"
 )
 
 // xxx.properties
@@ -67,16 +70,33 @@ func (pcl *PropertiesConfigLoader) Name() string {
 }
 
 func (pcl *PropertiesConfigLoader) Load(path string, targetPtr any) error {
+	if valuez.IsNil(targetPtr) {
+		return fmt.Errorf("nemo: load properties config file, targetPtr can't be nil")
+	}
+
+	ctx := make(map[string]any)
+	err := pcl.LoadMap(path, ctx)
+	if err != nil {
+		return err
+	}
+
+	return mapstructure.Decode(ctx, targetPtr)
+}
+
+func (pcl *PropertiesConfigLoader) LoadMap(path string, ctx map[string]any) error {
+	if valuez.IsNil(ctx) {
+		return fmt.Errorf("nemo: load properties config file, ctx can't be nil")
+	}
+
 	ppt, err := properties.LoadFile(path, properties.UTF8)
 	if err != nil {
 		return err
 	}
 
-	ctx := make(map[string]any)
 	for _, key := range ppt.Keys() {
 		value, _ := ppt.Get(key)
 		ctx[key] = value
 	}
 
-	return mapstructure.Decode(ctx, targetPtr)
+	return nil
 }

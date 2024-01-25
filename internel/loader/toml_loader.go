@@ -17,10 +17,13 @@
 package loader
 
 import (
+	"fmt"
+
 	"github.com/BurntSushi/toml"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
+	"github.com/photowey/nemo/pkg/valuez"
 )
 
 // xxx.toml
@@ -66,7 +69,21 @@ func (tcl *TomlConfigLoader) Name() string {
 }
 
 func (tcl *TomlConfigLoader) Load(path string, targetPtr any) error {
+	if valuez.IsNil(targetPtr) {
+		return fmt.Errorf("nemo: load toml config file, targetPtr can't be nil")
+	}
+
 	_, err := toml.DecodeFile(path, targetPtr)
+
+	return err
+}
+
+func (tcl *TomlConfigLoader) LoadMap(path string, ctx map[string]any) error {
+	if valuez.IsNil(ctx) {
+		return fmt.Errorf("nemo: load toml config file, ctx can't be nil")
+	}
+
+	_, err := toml.DecodeFile(path, &ctx)
 
 	return err
 }

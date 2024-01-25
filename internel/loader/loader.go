@@ -26,4 +26,5 @@ type ConfigLoader interface {
 	strategy.Supporter
 	Name() string
 	Load(path string, targetPtr any) error
+	LoadMap(path string, ctx map[string]any) error
 }

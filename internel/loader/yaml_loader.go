@@ -17,11 +17,13 @@
 package loader
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
+	"github.com/photowey/nemo/pkg/valuez"
 	"gopkg.in/yaml.v2"
 )
 
@@ -76,10 +78,27 @@ func (ycl *YamlConfigLoader) Name() string {
 }
 
 func (ycl *YamlConfigLoader) Load(path string, targetPtr any) error {
+	if valuez.IsNil(targetPtr) {
+		return fmt.Errorf("nemo: load yaml(yml) config file, targetPtr can't be nil")
+	}
+
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	return yaml.Unmarshal(bytes, targetPtr)
+}
+
+func (ycl *YamlConfigLoader) LoadMap(path string, ctx map[string]any) error {
+	if valuez.IsNil(ctx) {
+		return fmt.Errorf("nemo: load yaml(yml) config file, ctx can't be nil")
+	}
+
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(bytes, &ctx)
 }
