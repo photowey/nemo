@@ -26,8 +26,8 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 	testFile := determineTestSourceFilePath()
 	testdataDir := filepath.Dir(testFile)
 
-	absPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/application.yml"))
-	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/config.yml")) // not found
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.yml"))
+	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/config.yml")) // not found
 
 	ctx := make(map[string]any)
 

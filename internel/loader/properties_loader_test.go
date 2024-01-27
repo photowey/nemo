@@ -25,8 +25,8 @@ func TestPropertiesConfigLoader_Load(t *testing.T) {
 	testFile := determineTestSourceFilePath()
 	testdataDir := filepath.Dir(testFile)
 
-	absPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/application.properties"))
-	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/config.properties")) // not found
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.properties"))
+	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/config.properties")) // not found
 
 	ctx := make(map[string]any)
 

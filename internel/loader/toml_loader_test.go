@@ -25,8 +25,8 @@ func TestTomlConfigLoader_Load(t *testing.T) {
 	testFile := determineTestSourceFilePath()
 	testdataDir := filepath.Dir(testFile)
 
-	absPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/application.toml"))
-	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "./testdata/config.toml")) // not found
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.toml"))
+	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/config.toml")) // not found
 
 	ctx := make(map[string]any)
 
