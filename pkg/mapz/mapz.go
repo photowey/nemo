@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/stringz"
 	"github.com/photowey/nemo/pkg/valuez"
 )
@@ -83,6 +84,20 @@ func MergeMixedMaps(target map[string]any, source map[string]any) {
 			target[key] = sourceValue
 		}
 	}
+}
+
+// ----------------------------------------------------------------
+
+func Clean[K comparable, V any](ctx map[K]V) bool {
+	if collection.IsEmptyMap(ctx) {
+		return false
+	}
+
+	for k := range ctx {
+		delete(ctx, k)
+	}
+
+	return true
 }
 
 // ----------------------------------------------------------------
