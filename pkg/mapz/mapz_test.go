@@ -302,3 +302,263 @@ func TestMergeMixedMaps(t *testing.T) {
 		})
 	}
 }
+
+func TestContains(t *testing.T) {
+	type args[K comparable, V any] struct {
+		key K
+		ctx map[K]V
+	}
+	type testCase[K comparable, V any] struct {
+		name string
+		args args[K, V]
+		want bool
+	}
+	tests := []testCase[string, string]{
+		{
+			name: "mapz#Contains_string_true",
+			args: args[string, string]{
+				key: "a",
+				ctx: map[string]string{
+					"a": "1",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#Contains_string_false",
+			args: args[string, string]{
+				key: "a.b",
+				ctx: map[string]string{
+					"b": "1",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#Contains_string_false",
+			args: args[string, string]{
+				key: "a",
+				ctx: map[string]string{
+					"b": "1",
+				},
+			},
+			want: false,
+		},
+	}
+
+	intTests := []testCase[string, int64]{
+		{
+			name: "mapz#Contains_int64_true",
+			args: args[string, int64]{
+				key: "a",
+				ctx: map[string]int64{
+					"a": int64(10086),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#Contains_int64_false",
+			args: args[string, int64]{
+				key: "a",
+				ctx: map[string]int64{
+					"b": int64(10086),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#Contains_int64_false",
+			args: args[string, int64]{
+				key: "a.b",
+				ctx: map[string]int64{
+					"b": int64(10086),
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Contains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range intTests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Contains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNestedContains(t *testing.T) {
+	type args struct {
+		key string
+		ctx map[string]any
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "mapz#NestedContains_true",
+			args: args{
+				key: "a.b",
+				ctx: map[string]any{
+					"a": map[string]any{
+						"b": 1,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#NestedContains_false",
+			args: args{
+				key: "a.b",
+				ctx: map[string]any{
+					"a": map[string]any{},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mapz#NestedContains_single_key_true",
+			args: args{
+				key: "a",
+				ctx: map[string]any{
+					"a": map[string]any{
+						"b": 1,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mapz#NestedContains_single_key_false",
+			args: args{
+				key: "b",
+				ctx: map[string]any{
+					"a": map[string]any{},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NestedContains(tt.args.key, tt.args.ctx); got != tt.want {
+				t.Errorf("NestedContains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSortedKeys(t *testing.T) {
+	type args[V any] struct {
+		ctx map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want []string
+	}
+	tests := []testCase[string]{
+		{
+			name: "mapz#SortedKeys_string",
+			args: args[string]{
+				ctx: map[string]string{
+					"a": "1",
+					"z": "3",
+					"b": "2",
+				},
+			},
+			want: []string{"a", "b", "z"},
+		},
+	}
+	int64Tests := []testCase[int64]{
+		{
+			name: "mapz#SortedKeys_int64",
+			args: args[int64]{
+				ctx: map[string]int64{
+					"a": int64(1),
+					"z": int64(3),
+					"b": int64(2),
+				},
+			},
+			want: []string{"a", "b", "z"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedKeys(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedKeys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range int64Tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedKeys(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedKeys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSortedValues(t *testing.T) {
+	type args[V any] struct {
+		ctx map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want []V
+	}
+	tests := []testCase[string]{
+		{
+			name: "mapz#SortedValues_string",
+			args: args[string]{
+				ctx: map[string]string{
+					"a": "1",
+					"z": "3",
+					"b": "2",
+				},
+			},
+			want: []string{"1", "2", "3"},
+		},
+	}
+	int64Tests := []testCase[int64]{
+		{
+			name: "mapz#SortedValues_int64",
+			args: args[int64]{
+				ctx: map[string]int64{
+					"a": int64(1),
+					"z": int64(3),
+					"b": int64(2),
+				},
+			},
+			want: []int64{int64(1), int64(2), int64(3)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedValues(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	for _, tt := range int64Tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SortedValues(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortedValues() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

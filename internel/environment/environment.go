@@ -20,21 +20,18 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 
+	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
+	"github.com/photowey/nemo/internel/loader"
 	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/filez"
 	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
-)
-
-const (
-	PrepareEnvironmentEventName  = "nemo.environment.prepare.event"
-	PreLoadEnvironmentEventName  = "nemo.environment.load.pre.event"
-	PostLoadEnvironmentEventName = "nemo.environment.load.post.event"
-	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
 )
 
 type ActiveProfile string
@@ -57,9 +54,39 @@ const (
 )
 
 const (
+	PrepareEnvironmentEventName  = "nemo.environment.prepare.event"
+	PreLoadEnvironmentEventName  = "nemo.environment.load.pre.event"
+	PostLoadEnvironmentEventName = "nemo.environment.load.post.event"
+	ConfusedEnvironmentEventName = "nemo.environment.value.confused.event"
+)
+
+const (
 	DefaultSystemPropertySourceName = "os.env"
+	DefaultOptionPropertySourceName = "opt.properties"
 	EvnSeparator                    = "="
 	EvnValidLength                  = 2
+)
+
+const (
+	Yaml                      = "yaml"
+	Yml                       = "yml"
+	Toml                      = "toml"
+	Properties                = "properties"
+	DefaultPropertySourceType = Yml
+)
+
+const (
+	IniPropertySourceTyName         = "ini"
+	ConfPropertySourceTyName        = "conf"
+	ConfigPropertySourceTyName      = "config"
+	ConfigsPropertySourceTyName     = "configs"
+	ApplicationPropertySourceTyName = "application"
+)
+
+const (
+	AbsoluteFilePriority = ordered.HighPriority + 10*ordered.DefaultStep
+	AbsolutePathPriority = ordered.HighPriority + 20*ordered.DefaultStep
+	SearchPathPriority   = ordered.HighPriority + 30*ordered.DefaultStep
 )
 
 var (
@@ -79,7 +106,14 @@ var (
 )
 
 var (
-	supportedConfigTypes = stringz.InitStringSlice("yaml", "yml", "toml", "properties")
+	supportedConfigTypes = stringz.InitStringSlice(Yaml, Yml, Toml, Properties)
+	defaultConfigNames   = stringz.InitStringSlice(
+		IniPropertySourceTyName,
+		ConfPropertySourceTyName,
+		ConfigPropertySourceTyName,
+		ConfigsPropertySourceTyName,
+		ApplicationPropertySourceTyName,
+	)
 )
 
 var (
@@ -285,7 +319,7 @@ type Environment interface {
 	Destroy() error
 	Refresh(opts ...Option) error
 	LoadMap(sourceMap collection.MixedMap) error
-	LoadPropertySource(sources ...PropertySource) error
+	LoadPropertySources(sources ...PropertySource) error
 	Get(key string) (any, bool)
 	NestedGet(key string) (any, bool)
 	Set(key string, value any)
@@ -293,6 +327,8 @@ type Environment interface {
 	Contains(key string) bool
 	ActiveProfiles() collection.StringSlice
 	ActiveProfilesString() string
+	ActiveDefaultProfile() bool
+	Bind(prefix string, target any) error
 }
 
 // ----------------------------------------------------------------
@@ -305,7 +341,8 @@ type StandardEnvironment struct {
 	configMap       collection.MixedMap    // core config container
 	propertySources []PropertySource       // config sources
 	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
-	threshold       SuccessThreshold
+	threshold       SuccessThreshold       // threshold
+	binder          *binder.Binder         // default binder
 }
 
 // ----------------------------------------------------------------
@@ -316,6 +353,7 @@ func New(sources ...PropertySource) Environment {
 		propertySources: sources,
 		profiles:        make(collection.StringSlice, 0),
 		threshold:       NoneSuccessThreshold, // default threshold
+		binder:          binder.New(),
 	}
 }
 
@@ -327,7 +365,10 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 		return err
 	}
 
-	e.translateToPropertySources(optz)
+	err = e.translateToPropertySources(optz)
+	if err != nil {
+		return err
+	}
 
 	// prepare
 	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
@@ -371,10 +412,10 @@ func (e *StandardEnvironment) LoadMap(sourceMap collection.MixedMap) error {
 	return nil
 }
 
-func (e *StandardEnvironment) LoadPropertySource(sources ...PropertySource) error {
+func (e *StandardEnvironment) LoadPropertySources(sources ...PropertySource) error {
 	for _, source := range sources {
 		if stringz.IsNotBlankString(source.FilePath) {
-			if err := e.loadConfig(source.FilePath, source.Name, source.Type); err != nil {
+			if err := e.loadConfig(source.FilePath, source.Name, source.Suffix, source.Type); err != nil {
 				return err
 			}
 		}
@@ -406,7 +447,7 @@ func (e *StandardEnvironment) NestedSet(key string, value any) {
 }
 
 func (e *StandardEnvironment) Contains(key string) bool {
-	return true
+	return mapz.NestedContains(key, e.configMap)
 }
 
 func (e *StandardEnvironment) ActiveProfiles() collection.StringSlice {
@@ -415,6 +456,16 @@ func (e *StandardEnvironment) ActiveProfiles() collection.StringSlice {
 
 func (e *StandardEnvironment) ActiveProfilesString() string {
 	return stringz.Implode(e.profiles, stringz.SymbolComma)
+}
+
+func (e *StandardEnvironment) ActiveDefaultProfile() bool {
+	return collection.ArrayContains(e.profiles, DefaultActiveProfile.String())
+}
+
+func (e *StandardEnvironment) Bind(prefix string, target any) error {
+	e.binder.Bind(prefix, target, e.configMap)
+
+	return nil
 }
 
 // ----------------------------------------------------------------
@@ -435,18 +486,28 @@ func (e *StandardEnvironment) mergeMap(ctx collection.MixedMap) {
 	mapz.MergeMixedMaps(e.configMap, ctx)
 }
 
-func (e *StandardEnvironment) translateToPropertySources(opts *Options) {
+func (e *StandardEnvironment) translateToPropertySources(opts *Options) error {
 	e.translateSources(opts)
 	e.translateProfiles(opts)
 	e.translateProperties(opts)
+	err := e.translatePaths(opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (e *StandardEnvironment) translateSources(opts *Options) {
-	e.propertySources = append(e.propertySources, opts.Sources...)
+	if collection.IsNotEmptySlice(opts.Sources) {
+		e.propertySources = append(e.propertySources, opts.Sources...)
+	}
 }
 
 func (e *StandardEnvironment) translateProfiles(opts *Options) {
-	e.profiles = append(e.profiles, opts.Profiles...)
+	if collection.IsNotEmptySlice(opts.Profiles) {
+		e.profiles = append(e.profiles, opts.Profiles...)
+	}
 
 	// default profile active.
 	if collection.IsEmptySlice(e.profiles) {
@@ -455,7 +516,102 @@ func (e *StandardEnvironment) translateProfiles(opts *Options) {
 }
 
 func (e *StandardEnvironment) translateProperties(opts *Options) {
-	e.mergeMap(opts.Properties)
+	ps := initPropertySource(opts.Properties, ordered.DefaultPriority, DefaultOptionPropertySourceName)
+
+	e.propertySources = append(e.propertySources, ps)
+}
+
+func (e *StandardEnvironment) translatePaths(opts *Options) error {
+	absolutePaths := opts.AbsolutePaths
+	for _, absolutePath := range absolutePaths {
+		e.translatePathToPropertySourceIfNecessary(AbsoluteFilePriority, AbsolutePathPriority, absolutePath, opts)
+	}
+
+	searchPaths := opts.SearchPaths
+	if collection.IsNotEmptySlice(searchPaths) {
+		for _, searchPath := range searchPaths {
+			abs, err := filez.ToAbsIfNecessary(searchPath)
+			if err != nil {
+				return nil
+			}
+			e.translatePathToPropertySourceIfNecessary(ordered.DefaultPriority, SearchPathPriority, abs, opts)
+		}
+	}
+
+	return nil
+}
+
+func (e *StandardEnvironment) translatePathToPropertySourceIfNecessary(filePriority, priority int64, abs string, opts *Options) {
+	if stringz.IsBlankString(abs) {
+		return
+	}
+
+	abs = filepath.Clean(abs)
+
+	if filez.IsFile(abs) {
+		e.translateFileToPropertySource(filePriority, abs)
+		return
+	}
+
+	configNames := opts.ConfigNames
+	if collection.IsEmptySlice(configNames) {
+		for _, configName := range defaultConfigNames {
+			if collection.ArrayNotContains(configNames, configName) {
+				configNames = append(configNames, configName)
+			}
+		}
+	}
+
+	configTypes := opts.ConfigTypes
+	if collection.IsEmptySlice(configTypes) {
+		// custom ?
+		for _, supportedConfigType := range supportedConfigTypes {
+			if collection.ArrayNotContains(configTypes, supportedConfigType) {
+				configTypes = append(configTypes, supportedConfigType)
+			}
+		}
+	}
+
+	for _, configName := range configNames {
+		file := filepath.Join(abs, configName)
+		file = filepath.Clean(file)
+
+		if filez.IsFile(file) {
+			e.translateFileToPropertySource(filePriority, file)
+
+			continue
+		}
+
+		for _, configType := range configTypes {
+			ps := PropertySource{
+				Priority: priority,
+				Property: abs,
+				FilePath: abs,
+				Name:     configName,
+				Suffix:   configType,
+			}
+
+			e.propertySources = append(e.propertySources, ps)
+		}
+	}
+}
+
+func (e *StandardEnvironment) translateFileToPropertySource(priority int64, abs string) {
+	abs = filepath.Clean(abs)
+
+	dir := filepath.Dir(abs)
+	fileName := filepath.Base(abs)
+	ext := filepath.Ext(fileName)
+
+	ps := PropertySource{
+		Priority: priority,
+		Property: abs,
+		FilePath: dir,
+		Name:     fileName,
+		Suffix:   ext,
+	}
+
+	e.propertySources = append(e.propertySources, ps)
 }
 
 // ----------------------------------------------------------------
@@ -466,10 +622,32 @@ func (e *StandardEnvironment) onLoad() error {
 	sorter := ordered.NewSorter(e.propertySources...)
 	ordered.Sort(sorter, -1)
 
-	for _, source := range e.propertySources {
-		if err := e.LoadPropertySource(source); err != nil {
-			return err
+	th := e.threshold
+
+	okCounter := 0
+	errs := make([]error, 0)
+
+	for _, actor := range sorter {
+		source := actor.(PropertySource)
+		if err := e.LoadPropertySources(source); err != nil {
+			if AllSuccessThreshold.Int() == th.Int() {
+				return err
+			}
+			errs = append(errs, err)
+
+			continue
 		}
+
+		okCounter++
+	}
+
+	if AnyoneSuccessThreshold.Int() == th.Int() && okCounter == 0 {
+		sb := stringz.NewStringBuffer(len(errs))
+		for _, err := range errs {
+			sb.Append(err.Error())
+		}
+
+		return fmt.Errorf("nemo: failed to load the all property sources, messages:[%s]", sb.String())
 	}
 
 	return nil
@@ -508,11 +686,14 @@ func postParse(env string) {
 }
 
 func initSystemEnvPropertySource(envVars collection.MixedMap) PropertySource {
+	return initPropertySource(envVars, ordered.HighPriority, DefaultSystemPropertySourceName)
+}
+func initPropertySource(ctx collection.MixedMap, priority int64, property string) PropertySource {
 	return PropertySource{
-		Priority: ordered.HighPriority,
-		Property: DefaultSystemPropertySourceName,
+		Priority: priority,
+		Property: property,
 		Type:     reflect.TypeOf(collection.MixedMap{}),
-		Map:      envVars,
+		Map:      ctx,
 	}
 }
 
@@ -525,7 +706,41 @@ func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.MixedMa
 	e.propertySources = append(e.propertySources, envPs)
 }
 
-func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) error {
+func (e *StandardEnvironment) loadConfig(path, name, suffix string, _ reflect.Type) error {
+	ext := filepath.Ext(name)
+	if stringz.IsBlankString(ext) {
+		ext = suffix
+		name = stringz.Concat(name, stringz.Dot, ext)
+	}
+
+	if stringz.IsBlankString(ext) {
+		ext = DefaultPropertySourceType
+		name = stringz.Concat(name, stringz.Dot, ext)
+	}
+
+	loaders := loader.Loaders()
+	sorter := ordered.NewSorter(loaders...)
+	ordered.Sort(sorter, 1)
+
+	ctx := make(collection.MixedMap)
+	for _, actor := range sorter {
+		handler := actor.(loader.ConfigLoader)
+		if handler.Supports(ext) {
+			filePath := filepath.Clean(filepath.Join(path, name))
+			if err := handler.Load(filePath, &ctx); err != nil {
+				return err
+			}
+		}
+	}
+
+	if collection.IsNotEmptyMap(ctx) {
+		if err := e.LoadMap(ctx); err != nil {
+			return err
+		}
+	}
+
+	ctx = nil
+
 	return nil
 }
 

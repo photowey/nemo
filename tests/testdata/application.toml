@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------- server
+
+[server]
+port = 9527
+
+# ---------------------------------------------------------------- database
+
+[database]
+
+enabled = true
+driver = "mysql"
+database = "nemo"
+host = "192.168.1.10"
+port = 3306
+username = "root"
+password = "root"
+
+# ---------------------------------------------------------------- rabbitmq
+
+[rabbitmq]
+
+enabled = false
+host = "192.168.1.11"
+port = 5672
+user = "nemo"
+password = "nemo"
+vhosts = "vhost_admin"

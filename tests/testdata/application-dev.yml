@@ -1,0 +1,22 @@
+server:
+  port: 9527
+
+nemo:
+  application:
+    name: "nemoapp"
+  profiles:
+    active: "dev"
+  datasource:
+    driver: "mysql"
+    database: "nemo"
+    host: "192.168.1.10"
+    port: 3306
+    username: "root"
+    password: "root"
+  rabbitmq:
+    enabled: true
+    host: "192.168.1.11"
+    port: 5672
+    username: "nemo"
+    password: "nemo"
+    vhost: "vhost_admin"

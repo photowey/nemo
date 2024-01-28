@@ -66,9 +66,10 @@ func (bus *eventBus) onEvent(event Event) error {
 
 	listeners := bus.listenerMap[topic]
 	sorter := ordered.NewSorter(listeners...)
-
 	ordered.Sort(sorter, 1)
-	for _, h := range listeners {
+
+	for _, actor := range sorter {
+		h := actor.(EventListener[Event])
 		if h.Supports(topic) {
 			if err := h.OnEvent(event); err != nil {
 				return nil

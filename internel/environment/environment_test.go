@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
 	"github.com/photowey/nemo/pkg/collection"
 )
@@ -54,6 +55,7 @@ func TestNew(t *testing.T) {
 					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
 				},
 				profiles: make(collection.StringSlice, 0),
+				binder:   binder.New(),
 			},
 		},
 	}
@@ -123,7 +125,7 @@ func TestStandardEnvironment_Start(t *testing.T) {
 			fields: fields{
 				configMap: make(collection.MixedMap),
 				propertySources: []PropertySource{
-					{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"},
+					{Priority: 1, Property: "dev", FilePath: "../../tests/testdata", Name: "application-dev", Suffix: "yml"},
 				},
 				profiles: collection.StringSlice{"dev"},
 			},
@@ -134,7 +136,7 @@ func TestStandardEnvironment_Start(t *testing.T) {
 					WithConfigTypes("yaml", "yml", "toml"),
 					WithSearchPaths("resources", "configs"),
 					WithProfiles("dev", "test"),
-					WithSources(PropertySource{Priority: 1, Property: "dev", FilePath: "testdata", Name: "application-dev", Suffix: "yaml"}),
+					WithSources(PropertySource{Priority: 1, Property: "dev", FilePath: "../../tests/testdata", Name: "application-dev", Suffix: "yml"}),
 					WithProperties(properties),
 				},
 			},

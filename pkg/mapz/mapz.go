@@ -17,13 +17,15 @@
 package mapz
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/stringz"
+	"github.com/photowey/nemo/pkg/valuez"
 )
 
-func NestedGet(ctx collection.MixedMap, key string) (any, bool) {
+func NestedGet(ctx map[string]any, key string) (any, bool) {
 	keys := strings.Split(key, stringz.Dot)
 	current := ctx
 
@@ -36,7 +38,7 @@ func NestedGet(ctx collection.MixedMap, key string) (any, bool) {
 			return nil, false
 		}
 
-		next, ok := value.(collection.MixedMap)
+		next, ok := value.(map[string]any)
 		if !ok {
 			if i == len(keys)-1 {
 				return value, true
@@ -50,16 +52,16 @@ func NestedGet(ctx collection.MixedMap, key string) (any, bool) {
 	return current, true
 }
 
-func NestedSet(ctx collection.MixedMap, key string, value any) {
+func NestedSet(ctx map[string]any, key string, value any) {
 	keys := strings.Split(key, stringz.Dot)
 	lastKey := keys[len(keys)-1]
 	keys = keys[:len(keys)-1]
 
 	current := ctx
 	for _, k := range keys {
-		next, ok := current[k].(collection.MixedMap)
+		next, ok := current[k].(map[string]any)
 		if !ok {
-			next = make(collection.MixedMap)
+			next = make(map[string]any)
 			current[k] = next
 		}
 		current = next
@@ -68,13 +70,13 @@ func NestedSet(ctx collection.MixedMap, key string, value any) {
 	current[lastKey] = value
 }
 
-func MergeMixedMaps(target collection.MixedMap, source collection.MixedMap) {
+func MergeMixedMaps(target map[string]any, source map[string]any) {
 	for key, sourceValue := range source {
 		targetValue, exists := target[key]
 
 		if exists {
 			if IsMixedMap(targetValue) && IsMixedMap(sourceValue) {
-				MergeMixedMaps(targetValue.(collection.MixedMap), sourceValue.(collection.MixedMap))
+				MergeMixedMaps(targetValue.(map[string]any), sourceValue.(map[string]any))
 			} else {
 				target[key] = sourceValue
 			}
@@ -84,12 +86,105 @@ func MergeMixedMaps(target collection.MixedMap, source collection.MixedMap) {
 	}
 }
 
+// ----------------------------------------------------------------
+
+func Clean[K comparable, V any](ctx map[K]V) bool {
+	if collection.IsEmptyMap(ctx) {
+		return false
+	}
+
+	for k := range ctx {
+		delete(ctx, k)
+	}
+
+	return true
+}
+
+// ----------------------------------------------------------------
+
+func Contains[K comparable, V any](key K, ctx map[K]V) bool {
+	if valuez.IsNil(ctx) {
+		return false
+	}
+
+	_, ok := ctx[key]
+
+	return ok
+}
+
+func NestedContains(key string, ctx map[string]any) bool {
+	if valuez.IsNil(ctx) {
+		return false
+	}
+
+	keys := strings.Split(key, stringz.Dot)
+
+	for i, k := range keys {
+		value, ok := ctx[k]
+		if !ok {
+			return false
+		}
+
+		if i < len(keys)-1 {
+			if subMap, isMap := value.(map[string]any); isMap {
+				ctx = subMap
+			} else {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// ----------------------------------------------------------------
+
+func SortedKeys[V any](ctx map[string]V) []string {
+	keys := make([]string, 0, len(ctx))
+
+	for key := range ctx {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	return keys
+}
+
+func SortedValues[V any](ctx map[string]V) []V {
+	keys := SortedKeys(ctx)
+
+	values := make([]V, 0, len(keys))
+
+	for _, key := range keys {
+		values = append(values, ctx[key])
+	}
+
+	return values
+}
+
+// ----------------------------------------------------------------
+
+func Values[K comparable, V any](ctx map[K]V) []V {
+	values := make([]V, 0, len(ctx))
+
+	for _, value := range ctx {
+		values = append(values, value)
+	}
+
+	return values
+}
+
+// ----------------------------------------------------------------
+
 func IsMap[K comparable, V any](src any) bool {
 	_, ok := src.(map[K]V)
 	return ok
 }
 
 func IsMixedMap(src any) bool {
-	_, ok := src.(collection.MixedMap)
+	_, ok := src.(map[string]any)
 	return ok
 }
