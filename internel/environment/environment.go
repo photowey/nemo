@@ -26,6 +26,7 @@ import (
 
 	"github.com/photowey/nemo/internel/binder"
 	"github.com/photowey/nemo/internel/eventbus"
+	"github.com/photowey/nemo/internel/loader"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/filez"
 	"github.com/photowey/nemo/pkg/mapz"
@@ -67,6 +68,22 @@ const (
 )
 
 const (
+	Yaml                      = "yaml"
+	Yml                       = "yml"
+	Toml                      = "toml"
+	Properties                = "properties"
+	DefaultPropertySourceType = Yml
+)
+
+const (
+	IniPropertySourceTyName         = "ini"
+	ConfPropertySourceTyName        = "conf"
+	ConfigPropertySourceTyName      = "config"
+	ConfigsPropertySourceTyName     = "configs"
+	ApplicationPropertySourceTyName = "application"
+)
+
+const (
 	AbsoluteFilePriority = ordered.HighPriority + 10*ordered.DefaultStep
 	AbsolutePathPriority = ordered.HighPriority + 20*ordered.DefaultStep
 	SearchPathPriority   = ordered.HighPriority + 30*ordered.DefaultStep
@@ -89,8 +106,14 @@ var (
 )
 
 var (
-	supportedConfigTypes = stringz.InitStringSlice("yaml", "yml", "toml", "properties")
-	defaultConfigNames   = stringz.InitStringSlice("ini", "conf", "config", "configs", "application")
+	supportedConfigTypes = stringz.InitStringSlice(Yaml, Yml, Toml, Properties)
+	defaultConfigNames   = stringz.InitStringSlice(
+		IniPropertySourceTyName,
+		ConfPropertySourceTyName,
+		ConfigPropertySourceTyName,
+		ConfigsPropertySourceTyName,
+		ApplicationPropertySourceTyName,
+	)
 )
 
 var (
@@ -392,7 +415,7 @@ func (e *StandardEnvironment) LoadMap(sourceMap collection.MixedMap) error {
 func (e *StandardEnvironment) LoadPropertySources(sources ...PropertySource) error {
 	for _, source := range sources {
 		if stringz.IsNotBlankString(source.FilePath) {
-			if err := e.loadConfig(source.FilePath, source.Name, source.Type); err != nil {
+			if err := e.loadConfig(source.FilePath, source.Name, source.Suffix, source.Type); err != nil {
 				return err
 			}
 		}
@@ -604,7 +627,8 @@ func (e *StandardEnvironment) onLoad() error {
 	okCounter := 0
 	errs := make([]error, 0)
 
-	for _, source := range e.propertySources {
+	for _, actor := range sorter {
+		source := actor.(PropertySource)
 		if err := e.LoadPropertySources(source); err != nil {
 			if AllSuccessThreshold.Int() == th.Int() {
 				return err
@@ -682,7 +706,41 @@ func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.MixedMa
 	e.propertySources = append(e.propertySources, envPs)
 }
 
-func (e *StandardEnvironment) loadConfig(path, name string, _ reflect.Type) error {
+func (e *StandardEnvironment) loadConfig(path, name, suffix string, _ reflect.Type) error {
+	ext := filepath.Ext(name)
+	if stringz.IsBlankString(ext) {
+		ext = suffix
+		name = stringz.Concat(name, stringz.Dot, ext)
+	}
+
+	if stringz.IsBlankString(ext) {
+		ext = DefaultPropertySourceType
+		name = stringz.Concat(name, stringz.Dot, ext)
+	}
+
+	loaders := loader.Loaders()
+	sorter := ordered.NewSorter(loaders...)
+	ordered.Sort(sorter, 1)
+
+	ctx := make(collection.MixedMap)
+	for _, actor := range sorter {
+		handler := actor.(loader.ConfigLoader)
+		if handler.Supports(ext) {
+			filePath := filepath.Clean(filepath.Join(path, name))
+			if err := handler.Load(filePath, &ctx); err != nil {
+				return err
+			}
+		}
+	}
+
+	if collection.IsNotEmptyMap(ctx) {
+		if err := e.LoadMap(ctx); err != nil {
+			return err
+		}
+	}
+
+	ctx = nil
+
 	return nil
 }
 
