@@ -1,11 +1,11 @@
-﻿server:
+server:
   port: 9527
 
 nemo:
   application:
     name: "nemoapp"
   profiles:
-    active: "prod"
+    active: "dev"
   datasource:
     driver: "mysql"
     database: "nemo"
