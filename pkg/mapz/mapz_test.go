@@ -562,3 +562,36 @@ func TestSortedValues(t *testing.T) {
 		})
 	}
 }
+
+func TestClean(t *testing.T) {
+	type args[K comparable, V any] struct {
+		ctx map[K]V
+	}
+	type testCase[K comparable, V any] struct {
+		name string
+		args args[K, V]
+		want bool
+		size int
+	}
+	tests := []testCase[string, string]{
+		{
+			name: "mapz#Clean_true",
+			args: args[string, string]{
+				ctx: map[string]string{
+					"a": "1",
+					"z": "3",
+					"b": "2",
+				},
+			},
+			want: true,
+			size: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Clean(tt.args.ctx); got != tt.want || len(tt.args.ctx) != tt.size {
+				t.Errorf("Clean() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
