@@ -83,7 +83,15 @@ func (tcl *TomlConfigLoader) LoadMap(path string, ctx map[string]any) error {
 		return fmt.Errorf("nemo: load toml config file, ctx can't be nil")
 	}
 
-	_, err := toml.DecodeFile(path, &ctx)
+	raw := make(map[string]any)
+	_, err := toml.DecodeFile(path, &raw)
+	if err != nil {
+		return err
+	}
 
-	return err
+	for key, value := range normalizeMixedMap(raw) {
+		ctx[key] = value
+	}
+
+	return nil
 }

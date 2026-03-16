@@ -32,9 +32,6 @@ func NestedGet(ctx map[string]any, key string) (any, bool) {
 	for i, k := range keys {
 		value, ok := current[k]
 		if !ok {
-			if i == len(keys)-1 {
-				return current, true
-			}
 			return nil, false
 		}
 

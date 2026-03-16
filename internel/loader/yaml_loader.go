@@ -100,5 +100,14 @@ func (ycl *YamlConfigLoader) LoadMap(path string, ctx map[string]any) error {
 		return err
 	}
 
-	return yaml.Unmarshal(bytes, &ctx)
+	raw := make(map[string]any)
+	if err := yaml.Unmarshal(bytes, &raw); err != nil {
+		return err
+	}
+
+	for key, value := range normalizeMixedMap(raw) {
+		ctx[key] = value
+	}
+
+	return nil
 }

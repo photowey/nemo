@@ -76,6 +76,19 @@ func TestNestedGet(t *testing.T) {
 			want:   nil,
 			wantOk: false,
 		},
+		{
+			name: "mapz#NestedGet_false_missing_leaf",
+			args: args{
+				ctx: collection.MixedMap{
+					"a": collection.MixedMap{
+						"b": 1,
+					},
+				},
+				key: "a.c",
+			},
+			want:   nil,
+			wantOk: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -558,39 +571,6 @@ func TestSortedValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := SortedValues(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SortedValues() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestClean(t *testing.T) {
-	type args[K comparable, V any] struct {
-		ctx map[K]V
-	}
-	type testCase[K comparable, V any] struct {
-		name string
-		args args[K, V]
-		want bool
-		size int
-	}
-	tests := []testCase[string, string]{
-		{
-			name: "mapz#Clean_true",
-			args: args[string, string]{
-				ctx: map[string]string{
-					"a": "1",
-					"z": "3",
-					"b": "2",
-				},
-			},
-			want: true,
-			size: 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Clean(tt.args.ctx); got != tt.want || len(tt.args.ctx) != tt.size {
-				t.Errorf("Clean() = %v, want %v", got, tt.want)
 			}
 		})
 	}

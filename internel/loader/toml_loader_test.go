@@ -19,6 +19,8 @@ package loader
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/photowey/nemo/pkg/mapz"
 )
 
 func TestTomlConfigLoader_Load(t *testing.T) {
@@ -63,5 +65,21 @@ func TestTomlConfigLoader_Load(t *testing.T) {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestTomlConfigLoader_LoadMap(t *testing.T) {
+	testFile := determineTestSourceFilePath()
+	testdataDir := filepath.Dir(testFile)
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.toml"))
+
+	ctx := make(map[string]any)
+	tcl := NewTomlConfigLoader()
+	if err := tcl.LoadMap(absPath, ctx); err != nil {
+		t.Fatalf("LoadMap() error = %v", err)
+	}
+
+	if got, ok := mapz.NestedGet(ctx, "database.driver"); !ok || got != "mysql" {
+		t.Fatalf("expected database.driver to be loaded, got value=%v ok=%v", got, ok)
 	}
 }

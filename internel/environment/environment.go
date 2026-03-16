@@ -19,7 +19,6 @@ package environment
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -68,6 +67,7 @@ const (
 )
 
 const (
+	Ini                       = "ini"
 	Yaml                      = "yaml"
 	Yml                       = "yml"
 	Toml                      = "toml"
@@ -106,7 +106,7 @@ var (
 )
 
 var (
-	supportedConfigTypes = stringz.InitStringSlice(Yaml, Yml, Toml, Properties)
+	supportedConfigTypes = stringz.InitStringSlice(Ini, Yaml, Yml, Toml, Properties)
 	defaultConfigNames   = stringz.InitStringSlice(
 		IniPropertySourceTyName,
 		ConfPropertySourceTyName,
@@ -201,7 +201,7 @@ func (opts *Options) validate() (err error) {
 func validateAbsolutePaths(absolutePaths collection.StringSlice) error {
 	for _, absolutePath := range absolutePaths {
 		if stringz.IsNotBlankString(absolutePath) {
-			if ok := path.IsAbs(absolutePath); !ok {
+			if ok := filepath.IsAbs(absolutePath); !ok {
 				return fmt.Errorf("nemo: the candidate path:[%s] is not absolute path", absolutePath)
 			}
 		}
@@ -338,22 +338,25 @@ type Environment interface {
 // ----------------------------------------------------------------
 
 type StandardEnvironment struct {
-	configMap       collection.MixedMap    // core config container
-	propertySources []PropertySource       // config sources
-	profiles        collection.StringSlice // Profiles active e.g.: dev test prod ...
-	threshold       SuccessThreshold       // threshold
-	binder          *binder.Binder         // default binder
+	configMap            collection.MixedMap    // core config container
+	propertySources      []PropertySource       // config sources
+	initialPropertySources []PropertySource     // initial config sources
+	profiles             collection.StringSlice // Profiles active e.g.: dev test prod ...
+	threshold            SuccessThreshold       // threshold
+	binder               *binder.Binder         // default binder
 }
 
 // ----------------------------------------------------------------
 
 func New(sources ...PropertySource) Environment {
+	sourcez := append(make([]PropertySource, 0, len(sources)), sources...)
 	return &StandardEnvironment{
-		configMap:       make(collection.MixedMap),
-		propertySources: sources,
-		profiles:        make(collection.StringSlice, 0),
-		threshold:       NoneSuccessThreshold, // default threshold
-		binder:          binder.New(),
+		configMap:             make(collection.MixedMap),
+		propertySources:       append(make([]PropertySource, 0, len(sourcez)), sourcez...),
+		initialPropertySources: sourcez,
+		profiles:              make(collection.StringSlice, 0),
+		threshold:             NoneSuccessThreshold, // default threshold
+		binder:                binder.New(),
 	}
 }
 
@@ -373,36 +376,41 @@ func (e *StandardEnvironment) Start(opts ...Option) error {
 	// prepare
 	eventPrepare := NewStandardEnvironmentEvent(PrepareEnvironmentEventName, e)
 	if err = eventbus.Post(eventPrepare); err != nil {
-		return nil
+		return err
 	}
 
 	// pre load
 	preLoadEvent := NewStandardEnvironmentEvent(PreLoadEnvironmentEventName, e)
 	if err = eventbus.Post(preLoadEvent); err != nil {
-		return nil
+		return err
 	}
 
 	// on load
 	if err = e.onLoad(); err != nil {
-		return nil
+		return err
 	}
 
 	// post load
 	postLoadEvent := NewStandardEnvironmentEvent(PostLoadEnvironmentEventName, e)
 	if err = eventbus.Post(postLoadEvent); err != nil {
-		return nil
+		return err
 	}
 
 	return nil
 }
 
 func (e *StandardEnvironment) Destroy() error {
+	e.configMap = make(collection.MixedMap)
+	e.propertySources = append(make([]PropertySource, 0, len(e.initialPropertySources)), e.initialPropertySources...)
+	e.profiles = make(collection.StringSlice, 0)
+	e.threshold = NoneSuccessThreshold
 	return nil
 }
 
 func (e *StandardEnvironment) Refresh(opts ...Option) error {
-	// Destroy ...
-
+	if err := e.Destroy(); err != nil {
+		return err
+	}
 	return e.Start(opts...)
 }
 
@@ -463,9 +471,7 @@ func (e *StandardEnvironment) ActiveDefaultProfile() bool {
 }
 
 func (e *StandardEnvironment) Bind(prefix string, target any) error {
-	e.binder.Bind(prefix, target, e.configMap)
-
-	return nil
+	return e.binder.Bind(prefix, target, e.configMap)
 }
 
 // ----------------------------------------------------------------
@@ -490,6 +496,7 @@ func (e *StandardEnvironment) translateToPropertySources(opts *Options) error {
 	e.translateSources(opts)
 	e.translateProfiles(opts)
 	e.translateProperties(opts)
+	e.translateThreshold(opts)
 	err := e.translatePaths(opts)
 	if err != nil {
 		return err
@@ -521,6 +528,10 @@ func (e *StandardEnvironment) translateProperties(opts *Options) {
 	e.propertySources = append(e.propertySources, ps)
 }
 
+func (e *StandardEnvironment) translateThreshold(opts *Options) {
+	e.threshold = opts.Threshold
+}
+
 func (e *StandardEnvironment) translatePaths(opts *Options) error {
 	absolutePaths := opts.AbsolutePaths
 	for _, absolutePath := range absolutePaths {
@@ -532,7 +543,7 @@ func (e *StandardEnvironment) translatePaths(opts *Options) error {
 		for _, searchPath := range searchPaths {
 			abs, err := filez.ToAbsIfNecessary(searchPath)
 			if err != nil {
-				return nil
+				return err
 			}
 			e.translatePathToPropertySourceIfNecessary(ordered.DefaultPriority, SearchPathPriority, abs, opts)
 		}
@@ -593,6 +604,35 @@ func (e *StandardEnvironment) translatePathToPropertySourceIfNecessary(filePrior
 
 			e.propertySources = append(e.propertySources, ps)
 		}
+
+		for i, profile := range e.profiles {
+			if profile == DefaultActiveProfile.String() {
+				continue
+			}
+
+			profileConfigName := stringz.Concat(configName, "-", profile)
+			profileFile := filepath.Clean(filepath.Join(abs, profileConfigName))
+			profilePriority := priority - int64(i+1)
+			profileFilePriority := filePriority - int64(i+1)
+
+			if filez.IsFile(profileFile) {
+				e.translateFileToPropertySource(profileFilePriority, profileFile)
+
+				continue
+			}
+
+			for _, configType := range configTypes {
+				ps := PropertySource{
+					Priority: profilePriority,
+					Property: abs,
+					FilePath: abs,
+					Name:     profileConfigName,
+					Suffix:   configType,
+				}
+
+				e.propertySources = append(e.propertySources, ps)
+			}
+		}
 	}
 }
 
@@ -601,13 +641,14 @@ func (e *StandardEnvironment) translateFileToPropertySource(priority int64, abs 
 
 	dir := filepath.Dir(abs)
 	fileName := filepath.Base(abs)
-	ext := filepath.Ext(fileName)
+	ext := strings.TrimPrefix(filepath.Ext(fileName), stringz.Dot)
+	base := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
 	ps := PropertySource{
 		Priority: priority,
 		Property: abs,
 		FilePath: dir,
-		Name:     fileName,
+		Name:     base,
 		Suffix:   ext,
 	}
 
@@ -707,10 +748,12 @@ func (e *StandardEnvironment) loadSystemEnvMapDelayed(envVars collection.MixedMa
 }
 
 func (e *StandardEnvironment) loadConfig(path, name, suffix string, _ reflect.Type) error {
-	ext := filepath.Ext(name)
+	ext := strings.TrimPrefix(filepath.Ext(name), stringz.Dot)
 	if stringz.IsBlankString(ext) {
-		ext = suffix
-		name = stringz.Concat(name, stringz.Dot, ext)
+		ext = strings.TrimPrefix(suffix, stringz.Dot)
+		if stringz.IsNotBlankString(ext) {
+			name = stringz.Concat(name, stringz.Dot, ext)
+		}
 	}
 
 	if stringz.IsBlankString(ext) {
@@ -723,14 +766,19 @@ func (e *StandardEnvironment) loadConfig(path, name, suffix string, _ reflect.Ty
 	ordered.Sort(sorter, 1)
 
 	ctx := make(collection.MixedMap)
+	supported := false
 	for _, actor := range sorter {
 		handler := actor.(loader.ConfigLoader)
 		if handler.Supports(ext) {
+			supported = true
 			filePath := filepath.Clean(filepath.Join(path, name))
-			if err := handler.Load(filePath, &ctx); err != nil {
+			if err := handler.LoadMap(filePath, ctx); err != nil {
 				return err
 			}
 		}
+	}
+	if !supported {
+		return fmt.Errorf("nemo: config type:[%s] not supported", ext)
 	}
 
 	if collection.IsNotEmptyMap(ctx) {
@@ -788,6 +836,12 @@ func WithProperties(properties collection.MixedMap) Option {
 	}
 }
 
+func WithThreshold(threshold SuccessThreshold) Option {
+	return func(opts *Options) {
+		opts.Threshold = threshold
+	}
+}
+
 // ----------------------------------------------------------------
 
 func initOptions(opts ...Option) (*Options, error) {
@@ -816,5 +870,6 @@ func newOptions() *Options {
 		Profiles:      make(collection.StringSlice, 0),
 		Sources:       make(PropertySources, 0),
 		Properties:    make(collection.MixedMap),
+		Threshold:     NoneSuccessThreshold,
 	}
 }
