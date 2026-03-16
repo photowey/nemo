@@ -787,8 +787,6 @@ func (e *StandardEnvironment) loadConfig(path, name, suffix string, _ reflect.Ty
 		}
 	}
 
-	ctx = nil
-
 	return nil
 }
 
