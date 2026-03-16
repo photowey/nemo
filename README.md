@@ -2,105 +2,156 @@
 
 English | [中文](./README_zh_CN.md)
 
-`Nemo` is a `Golang` language configuration management tool, similar to Spring Environment. At the same time, the
-built-in Binder supports structure binding. Supports loading of **`multi-path`**, **`multi-file`**
-, **`multi-environment`** and **`multi-type` **configurations
+`nemo` is a lightweight configuration runtime for Go, inspired by Spring Environment but designed to feel like a native Go capability.
 
-## 1.`Multi-path`
+Its goals are:
 
-- `/opt/data`
-- `/opt/configs`
-- `...`
+- strong capability
+- simple usage
+- reliable behavior
+- low cognitive overhead
 
-> High priority
+## What It Does
 
-## 2.`Multi-search-path`
+`nemo` supports:
 
-- `./resources`
-- `./config`
-- `./configs`
+- multiple search paths
+- multiple config names
+- multiple config formats
+- active profiles
+- system environment ingestion
+- in-memory property sources
+- nested property lookup and mutation
+- struct binding
+- refresh lifecycle
 
-## 3.`Multi-environment`
+Supported formats:
 
-- `dev`
-- `test`
-- `prod`
-- `...`
-
-## 4.`Multi-type`
-
-- `yaml`
-
-  - `yml`
-- `toml`
+- `ini`
 - `properties`
+- `toml`
+- `yaml`
+- `yml`
 
-## 5.`System Environment`
+## Public API
 
-- `os.Env`
-
-## 6.`Custem Map context`
-
-```go
-// env.LoadMap(...)
-```
-
-## 7.`Expand`
-
-### 7.1.`Expand`
-
-- `${a.b.c....z}`
-
-### 7.2.`Expand/default`
-
-- `${a.b.c....z:hello}`
-
-## 8.`Operation`
-
-### 8.1.`Set`
-
-#### 8.1.1.`Simple Set`
+The recommended entrypoint is the root package:
 
 ```go
-// env.Set("key", "value")
+import nemo "github.com/photowey/nemo"
 ```
 
-#### 8.1.2.`Nested Set`
+Key public API:
+
+- `nemo.New(...)`
+- `nemo.Environment`
+- `nemo.PropertySource`
+- `nemo.WithSearchPaths(...)`
+- `nemo.WithProfiles(...)`
+- `nemo.WithProperties(...)`
+- `nemo.WithThreshold(...)`
+- `nemo.Bind[T](env, prefix)`
+- `nemo.MustBind[T](env, prefix)`
+- `nemo.AsBindError(err)`
+- `nemo.IsBindErrorKind(err, kind)`
+- `nemo.FormatBindDiagnostic(err)`
+
+## Quick Start
 
 ```go
-// env.Get("a.b.c....z", "value")
-// env.NestedGet("a.b.c....z", "value")
+package main
+
+import (
+    "fmt"
+
+    nemo "github.com/photowey/nemo"
+)
+
+type FeatureConfig struct {
+    Enabled bool `binder:"enabled" required:"true"`
+    Port    int  `binder:"port" default:"8080"`
+}
+
+func main() {
+    env := nemo.New()
+    err := env.Start(
+        nemo.WithSearchPaths("config", "configs"),
+        nemo.WithProfiles("dev"),
+        nemo.WithProperties(nemo.MixedMap{
+            "app": nemo.MixedMap{
+                "feature": nemo.MixedMap{
+                    "enabled": "true",
+                },
+            },
+        }),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    cfg := nemo.MustBind[FeatureConfig](env, "app.feature")
+    fmt.Println(cfg.Enabled, cfg.Port)
+}
 ```
 
-### 8.2.`Get`
+## Binding Tags
 
-#### 8.2.1.`Simple Get`
+`nemo` binder supports:
 
-```go
-// evn.Get("key", "value")
-```
+- ``binder:"field"`` maps a property key
+- ``required:"true"`` makes the property mandatory
+- ``default:"value"`` provides a fallback
 
-#### 8.2.2.`Nested Get`
+Supported binding targets include:
 
-```go
-// evn.Get("a.b.c....z", "value")
-// evn.NestedGet("a.b.c....z", "value")
-```
+- scalar values
+- `time.Duration`
+- slices like `[]string` and `[]int`
+- pointer fields
+- nested pointer structs
 
-### 8.3.`Refresh Context`
+## Property Sources
 
-- `env.Refresh(...)`
+`nemo` merges property sources in priority order.
 
-## 9.`ConfigCenter`
+Typical source kinds:
 
-- `Nacos`
-  - `TODO`
+- explicit absolute file paths
+- search paths plus config names
+- in-memory maps
+- system environment variables
 
-## 10.`Load`
+## Profiles
 
-### 10.1.`Support Event`
+Profiles participate in config candidate generation. For example, with profile `dev`, `nemo` may consider names such as:
 
-- `EnvironmentEvent`
-- `StandardAnyEvent`
-  - `data any`
+- `application.yml`
+- `application-dev.yml`
 
+## Error Model
+
+Binding errors are structured and expose categories such as:
+
+- invalid target
+- invalid tag
+- missing required field
+- unsupported type
+- conversion failure
+
+This makes it practical to integrate `nemo` into larger frameworks like `iocgo`.
+
+## Status
+
+Implemented and tested:
+
+- environment lifecycle
+- profile-aware loading
+- multi-format loaders
+- nested binding
+- required/default semantics
+- typed root package API
+
+Planned, but not fully implemented:
+
+- placeholder expansion like `${a.b.c}`
+- remote config center support such as Nacos

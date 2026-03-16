@@ -17,8 +17,10 @@
 package binder
 
 import (
+	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/photowey/nemo/pkg/collection"
 )
@@ -36,6 +38,35 @@ type Main struct {
 	Sub Sub     `binder:"sub"`
 }
 
+type StringMain struct {
+	A string  `binder:"a"`
+	B int     `binder:"b"`
+	C bool    `binder:"c"`
+	D float64 `binder:"d"`
+}
+
+type TaggedConfig struct {
+	RequiredName string `binder:"name" required:"true"`
+	DefaultHost  string `binder:"host" default:"127.0.0.1"`
+	DefaultPort  int    `binder:"port" default:"8080"`
+}
+
+type InvalidTaggedConfig struct {
+	Flag bool `required:"true"`
+}
+
+type InvalidRequiredConfig struct {
+	Name string `binder:"name" required:"sometimes"`
+}
+
+type RichConfig struct {
+	Timeout time.Duration `binder:"timeout" default:"5s"`
+	Tags    []string      `binder:"tags" default:"a,b,c"`
+	Ports   []int         `binder:"ports"`
+	PortPtr *int          `binder:"portPtr" default:"7002"`
+	Sub     *Sub          `binder:"sub"`
+}
+
 func TestBinder_Bind(t *testing.T) {
 	type args struct {
 		prefix string
@@ -46,6 +77,7 @@ func TestBinder_Bind(t *testing.T) {
 		name string
 		args args
 		want Main
+		wantErr bool
 	}{
 		{
 			name: "builder#Bind",
@@ -77,7 +109,10 @@ func TestBinder_Bind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := New()
-			b.Bind(tt.args.prefix, &tt.args.target, tt.args.ctx)
+			err := b.Bind(tt.args.prefix, &tt.args.target, tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Bind() error = %v, wantErr %v", err, tt.wantErr)
+			}
 			if !reflect.DeepEqual(tt.args.target, tt.want) {
 				t.Errorf("Expected %+v, but got %+v", tt.want, tt.args.target)
 			}
@@ -95,6 +130,7 @@ func TestBinder_DefaultBind(t *testing.T) {
 		name string
 		args args
 		want Main
+		wantErr bool
 	}{
 		{
 			name: "builder#DefaultBind",
@@ -126,11 +162,168 @@ func TestBinder_DefaultBind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := NewBinder(tt.args.prefix)
-			b.DefaultBind(&tt.args.target, tt.args.ctx)
+			err := b.DefaultBind(&tt.args.target, tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("DefaultBind() error = %v, wantErr %v", err, tt.wantErr)
+			}
 			if !reflect.DeepEqual(tt.args.target, tt.want) {
 				t.Errorf("Expected %+v, but got %+v", tt.want, tt.args.target)
 			}
 		})
+	}
+}
+
+func TestBinder_BindStringConversions(t *testing.T) {
+	target := StringMain{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{
+			"a": "hello",
+			"b": "42",
+			"c": "true",
+			"d": "3.14",
+		},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err != nil {
+		t.Fatalf("Bind() error = %v", err)
+	}
+
+	want := StringMain{A: "hello", B: 42, C: true, D: 3.14}
+	if !reflect.DeepEqual(target, want) {
+		t.Fatalf("Bind() target = %+v, want %+v", target, want)
+	}
+}
+
+func TestBinder_BindInvalidConversion(t *testing.T) {
+	target := StringMain{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{
+			"a": "hello",
+			"b": "not-a-number",
+		},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err == nil {
+		t.Fatalf("expected conversion error")
+	}
+}
+
+func TestBinder_BindRequiredField(t *testing.T) {
+	target := TaggedConfig{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err == nil {
+		t.Fatalf("expected required field error")
+	}
+	var bindErr *BindError
+	if !errors.As(err, &bindErr) {
+		t.Fatalf("expected BindError, got %T", err)
+	}
+	if bindErr.Kind != MissingRequiredErrorKind {
+		t.Fatalf("expected missing required bind error kind, got %s", bindErr.Kind)
+	}
+}
+
+func TestBinder_BindDefaultValues(t *testing.T) {
+	target := TaggedConfig{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{
+			"name": "demo",
+		},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err != nil {
+		t.Fatalf("Bind() error = %v", err)
+	}
+
+	want := TaggedConfig{
+		RequiredName: "demo",
+		DefaultHost:  "127.0.0.1",
+		DefaultPort:  8080,
+	}
+	if !reflect.DeepEqual(target, want) {
+		t.Fatalf("Bind() target = %+v, want %+v", target, want)
+	}
+}
+
+func TestBinder_RejectsConstraintsWithoutBinderTag(t *testing.T) {
+	target := InvalidTaggedConfig{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err == nil {
+		t.Fatalf("expected binder constraint validation error")
+	}
+	var bindErr *BindError
+	if !errors.As(err, &bindErr) {
+		t.Fatalf("expected BindError, got %T", err)
+	}
+	if bindErr.Kind != InvalidTagErrorKind {
+		t.Fatalf("expected invalid tag error kind, got %s", bindErr.Kind)
+	}
+}
+
+func TestBinder_RejectsInvalidRequiredTagValue(t *testing.T) {
+	target := InvalidRequiredConfig{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{
+			"name": "demo",
+		},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err == nil {
+		t.Fatalf("expected invalid required tag error")
+	}
+	var bindErr *BindError
+	if !errors.As(err, &bindErr) {
+		t.Fatalf("expected BindError, got %T", err)
+	}
+	if bindErr.Kind != InvalidTagErrorKind {
+		t.Fatalf("expected invalid tag error kind, got %s", bindErr.Kind)
+	}
+}
+
+func TestBinder_BindRichTypes(t *testing.T) {
+	target := RichConfig{}
+	ctx := collection.MixedMap{
+		"cfg": collection.MixedMap{
+			"ports":   []any{"8080", "9090"},
+			"timeout": "3s",
+			"sub": collection.MixedMap{
+				"x": "nested",
+				"y": 12,
+			},
+		},
+	}
+
+	err := New().Bind("cfg", &target, ctx)
+	if err != nil {
+		t.Fatalf("Bind() error = %v", err)
+	}
+
+	if target.Timeout != 3*time.Second {
+		t.Fatalf("expected timeout to be parsed, got %v", target.Timeout)
+	}
+	if !reflect.DeepEqual(target.Tags, []string{"a", "b", "c"}) {
+		t.Fatalf("expected default tags, got %+v", target.Tags)
+	}
+	if !reflect.DeepEqual(target.Ports, []int{8080, 9090}) {
+		t.Fatalf("expected parsed ports, got %+v", target.Ports)
+	}
+	if target.PortPtr == nil || *target.PortPtr != 7002 {
+		t.Fatalf("expected default pointer port, got %+v", target.PortPtr)
+	}
+	if target.Sub == nil || target.Sub.X != "nested" || target.Sub.Y != 12 {
+		t.Fatalf("expected bound nested pointer struct, got %+v", target.Sub)
 	}
 }
 

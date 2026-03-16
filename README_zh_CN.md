@@ -1,111 +1,157 @@
 # `nemo`
 
-[English](./README.md)  | 中文
+[English](./README.md) | 中文
 
-`Nemo` 是一款 `Golang` 语言配置管理工具, 设计思想来源于 `Spring` `Environment `。内置的 `Binder`
-支持结构体绑定。与此同时,可以通过 **多路径**、**多文件**、**多环境**、**多类型** 等高自由度的配置来实现 `Golang` `App`
-的配置加载。
+`nemo` 是一个面向 Go 的轻量配置运行时。它参考了 Spring Environment 的一些思想，但目标不是做一个“很重的框架”，而是做一个“强但无感”的原生能力。
 
-## 1.支持多(绝对)路径
+它强调：
 
-- `/opt/data`
-- `/opt/configs`
-- `...`
+- 能力足够强
+- 使用足够简单
+- 行为足够稳定
+- 尽量降低心智负担
 
-> 高优先级
+## 核心能力
 
-## 2.支持多搜索路径
+`nemo` 当前支持：
 
-- `./resources`
-- `./config`
-- `./configs`
+- 多搜索路径
+- 多配置名
+- 多配置格式
+- Active Profile
+- 系统环境变量加载
+- 内存属性源
+- 嵌套属性读写
+- 结构体绑定
+- 刷新生命周期
 
-## 3.支持多环境
+支持的配置格式：
 
-- `dev`
-- `test`
-- `prod`
-- `...`
-
-## 4.多类型
-
-- `yaml`
-
-    - `yml`
-
-- `toml`
-
+- `ini`
 - `properties`
+- `toml`
+- `yaml`
+- `yml`
 
-## 5.支持环境变量
+## 推荐入口
 
-## 6.支持自定义 `Map` 上下文
-
-### 6.1.加载 `Map`
-
-```go
-// env.LoadMap(...)
-```
-
-## 7.支持变量扩展
-
-### 7.1.变量扩展
-
-- `${a.b.c....z}`
-
-### 7.2.变量默认值
-
-- `${a.b.c....z:hello}`
-
-## 8.变量操作
-
-### 8.1.设置变量
-
-#### 8.1.1.设置单 `Key` 变量
+推荐直接使用根包：
 
 ```go
-// env.Set("key", "value")
+import nemo "github.com/photowey/nemo"
 ```
 
-#### 8.1.2.设置嵌套变量
+常用公开 API：
+
+- `nemo.New(...)`
+- `nemo.Environment`
+- `nemo.PropertySource`
+- `nemo.WithSearchPaths(...)`
+- `nemo.WithProfiles(...)`
+- `nemo.WithProperties(...)`
+- `nemo.WithThreshold(...)`
+- `nemo.Bind[T](env, prefix)`
+- `nemo.MustBind[T](env, prefix)`
+- `nemo.AsBindError(err)`
+- `nemo.IsBindErrorKind(err, kind)`
+- `nemo.FormatBindDiagnostic(err)`
+
+## 快速开始
 
 ```go
-// env.Get("a.b.c....z", "value")
-// env.NestedGet("a.b.c....z", "value") // 推荐 -> 这样开发者能更明确自己设置的值是否是嵌套 KEY
+package main
+
+import (
+    "fmt"
+
+    nemo "github.com/photowey/nemo"
+)
+
+type FeatureConfig struct {
+    Enabled bool `binder:"enabled" required:"true"`
+    Port    int  `binder:"port" default:"8080"`
+}
+
+func main() {
+    env := nemo.New()
+    err := env.Start(
+        nemo.WithSearchPaths("config", "configs"),
+        nemo.WithProfiles("dev"),
+        nemo.WithProperties(nemo.MixedMap{
+            "app": nemo.MixedMap{
+                "feature": nemo.MixedMap{
+                    "enabled": "true",
+                },
+            },
+        }),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    cfg := nemo.MustBind[FeatureConfig](env, "app.feature")
+    fmt.Println(cfg.Enabled, cfg.Port)
+}
 ```
 
-### 8.2.获取变量
+## 绑定标签
 
-#### 8.2.1.获取单 `Key` 变量
+Binder 当前支持：
 
-```go
-// evn.Get("key", "value")
-```
+- ``binder:"field"``：字段映射
+- ``required:"true"``：必须项
+- ``default:"value"``：默认值
 
-#### 8.2.2.获取嵌套
+目前支持的目标类型包括：
 
-```go
-// evn.Get("a.b.c....z", "value")
-// evn.NestedGet("a.b.c....z", "value") // 推荐
-```
+- 基础标量类型
+- `time.Duration`
+- 切片，例如 `[]string`、`[]int`
+- 指针字段
+- 嵌套指针结构体
 
-### 8.3.上下文刷新
+## 配置来源
 
-- `env.Refresh(...)`
+`nemo` 会按优先级合并属性源。
 
-### 9.支持配置中心
+常见来源：
 
-- `Nacos`
-    - `TODO`
-    - 思考中
-        - 通过环境上下文加载的 **准备事件** `PrepareEvent` 向 `Nacos` 获取配置
-        - 构造 `ProertySource`
-            - `Map` 类型的 `PropertySource`
+- 显式绝对文件路径
+- 搜索路径 + 配置名
+- 内存 `Map`
+- 系统环境变量
 
-## 10.加载
+## Profile
 
-### 10.1.支持事件
+Profile 会参与候选配置文件的推导。例如 profile 为 `dev` 时，可能会考虑：
 
-- `EnvironmentEvent`
-- `StandardAnyEvent`
-    - `data any`
+- `application.yml`
+- `application-dev.yml`
+
+## 错误模型
+
+绑定错误支持结构化分类，例如：
+
+- invalid target
+- invalid tag
+- missing required field
+- unsupported type
+- conversion failure
+
+这让 `nemo` 很适合作为更大框架中的配置基础能力。
+
+## 当前状态
+
+已经实现并测试：
+
+- 环境生命周期
+- profile 感知加载
+- 多格式 loader
+- 嵌套绑定
+- required/default 语义
+- 根包公共 API
+
+规划中但尚未完整实现：
+
+- `${a.b.c}` 形式的占位符展开
+- Nacos 等远程配置中心支持

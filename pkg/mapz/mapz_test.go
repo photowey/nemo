@@ -76,6 +76,19 @@ func TestNestedGet(t *testing.T) {
 			want:   nil,
 			wantOk: false,
 		},
+		{
+			name: "mapz#NestedGet_false_missing_leaf",
+			args: args{
+				ctx: collection.MixedMap{
+					"a": collection.MixedMap{
+						"b": 1,
+					},
+				},
+				key: "a.c",
+			},
+			want:   nil,
+			wantOk: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

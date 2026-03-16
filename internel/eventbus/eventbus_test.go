@@ -17,7 +17,11 @@
 package eventbus
 
 import (
+	"errors"
 	"testing"
+
+	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/ordered"
 )
 
 func TestPost(t *testing.T) {
@@ -69,5 +73,39 @@ func TestPostAsync(t *testing.T) {
 				t.Errorf("Post() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+type failingListener struct{}
+
+func (f failingListener) Order() int64 {
+	return ordered.DefaultPriority
+}
+
+func (f failingListener) Name() string {
+	return "failing"
+}
+
+func (f failingListener) Topic() collection.StringSlice {
+	return collection.StringSlice{"failing.event"}
+}
+
+func (f failingListener) Supports(event string) bool {
+	return event == "failing.event"
+}
+
+func (f failingListener) OnEvent(event Event) error {
+	return errors.New("listener failed")
+}
+
+func TestEventBusPostPropagatesListenerError(t *testing.T) {
+	bus := &eventBus{listenerMap: make(EventListenerContainer)}
+	if err := bus.Register(failingListener{}); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	err := bus.Post(NewStandardAnyEvent("failing.event", "payload"))
+	if err == nil {
+		t.Fatalf("expected listener error to be propagated")
 	}
 }

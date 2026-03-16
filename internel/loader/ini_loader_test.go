@@ -1,5 +1,5 @@
 /*
- * Copyright © 2023 the original author or authors.
+ * Copyright 漏 2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ package loader
 
 import (
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/photowey/nemo/pkg/mapz"
 )
 
-func TestYamlConfigLoader_Load(t *testing.T) {
+func TestIniConfigLoader_Load(t *testing.T) {
 	testFile := determineTestSourceFilePath()
 	testdataDir := filepath.Dir(testFile)
 
-	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.yml"))
-	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/config.yml")) // not found
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.ini"))
+	badAbsPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/config.ini"))
 
 	ctx := make(map[string]any)
 
@@ -43,7 +42,7 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "loader#yaml_ok",
+			name: "loader#ini_ok",
 			args: args{
 				path:      absPath,
 				targetPtr: &ctx,
@@ -51,7 +50,7 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "loader#yaml_failed",
+			name: "loader#ini_failed",
 			args: args{
 				path:      badAbsPath,
 				targetPtr: &ctx,
@@ -61,36 +60,30 @@ func TestYamlConfigLoader_Load(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ycl := NewYamlConfigLoader()
-
-			if err := ycl.Load(tt.args.path, tt.args.targetPtr); (err != nil) != tt.wantErr {
+			icl := NewIniConfigLoader()
+			if err := icl.Load(tt.args.path, tt.args.targetPtr); (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestYamlConfigLoader_LoadMap(t *testing.T) {
+func TestIniConfigLoader_LoadMap(t *testing.T) {
 	testFile := determineTestSourceFilePath()
 	testdataDir := filepath.Dir(testFile)
-	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.yml"))
 
+	absPath := filepath.Clean(filepath.Join(testdataDir, "../../tests/testdata/application.ini"))
 	ctx := make(map[string]any)
-	ycl := NewYamlConfigLoader()
-	if err := ycl.LoadMap(absPath, ctx); err != nil {
+
+	icl := NewIniConfigLoader()
+	if err := icl.LoadMap(absPath, ctx); err != nil {
 		t.Fatalf("LoadMap() error = %v", err)
 	}
 
 	if got, ok := mapz.NestedGet(ctx, "nemo.application.name"); !ok || got != "nemoapp" {
 		t.Fatalf("expected nemo.application.name to be loaded, got value=%v ok=%v", got, ok)
 	}
-}
-
-func determineTestSourceFilePath() string {
-	_, filename, _, ok := runtime.Caller(1)
-	if !ok {
-		panic("nemo: failed to get source file path")
+	if got, ok := mapz.NestedGet(ctx, "nemo.profiles.active"); !ok || got != "dev" {
+		t.Fatalf("expected nemo.profiles.active to be loaded, got value=%v ok=%v", got, ok)
 	}
-
-	return filename
 }

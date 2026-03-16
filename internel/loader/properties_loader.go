@@ -21,6 +21,7 @@ import (
 
 	"github.com/magiconair/properties"
 	"github.com/mitchellh/mapstructure"
+	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/collection"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
@@ -95,7 +96,7 @@ func (pcl *PropertiesConfigLoader) LoadMap(path string, ctx map[string]any) erro
 
 	for _, key := range ppt.Keys() {
 		value, _ := ppt.Get(key)
-		ctx[key] = value
+		mapz.NestedSet(ctx, key, value)
 	}
 
 	return nil

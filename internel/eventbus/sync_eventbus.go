@@ -72,7 +72,7 @@ func (bus *eventBus) onEvent(event Event) error {
 		h := actor.(EventListener[Event])
 		if h.Supports(topic) {
 			if err := h.OnEvent(event); err != nil {
-				return nil
+				return err
 			}
 		}
 	}

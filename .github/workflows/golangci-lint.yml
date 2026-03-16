@@ -14,13 +14,12 @@ jobs:
         golang:
           - 1.18
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.18
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.1.0
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.46.1
+          version: v1.64.8
           args: --timeout=10m
-          skip-go-installation: true

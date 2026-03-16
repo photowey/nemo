@@ -6,5 +6,6 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/magiconair/properties v1.8.7
 	github.com/mitchellh/mapstructure v1.5.0
+	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v2 v2.4.0
 )
