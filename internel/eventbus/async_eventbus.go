@@ -29,7 +29,7 @@ type asyncEventBus struct {
 func (bus *asyncEventBus) Register(listener EventListener[Event]) error {
 	if listener != nil {
 		if len(listener.Topic()) == 0 {
-			return listenerTopicEmptyError
+			return errListenerTopicEmpty
 		}
 
 		for _, topic := range listener.Topic() {
@@ -42,7 +42,7 @@ func (bus *asyncEventBus) Register(listener EventListener[Event]) error {
 		return nil
 	}
 
-	return listenerNilError
+	return errListenerNil
 }
 
 func (bus *asyncEventBus) Post(event Event) error {

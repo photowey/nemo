@@ -32,7 +32,7 @@ type eventBus struct {
 func (bus *eventBus) Register(listener EventListener[Event]) error {
 	if listener != nil {
 		if len(listener.Topic()) == 0 {
-			return listenerTopicEmptyError
+			return errListenerTopicEmpty
 		}
 
 		for _, topic := range listener.Topic() {
@@ -45,7 +45,7 @@ func (bus *eventBus) Register(listener EventListener[Event]) error {
 		return nil
 	}
 
-	return listenerNilError
+	return errListenerNil
 }
 
 func (bus *eventBus) Post(event Event) error {
@@ -61,7 +61,7 @@ func (bus *eventBus) onEvent(event Event) error {
 	}
 
 	if stringz.IsBlankString(topic) {
-		return eventTopicOrNameEmptyError
+		return errEventTopicOrNameEmpty
 	}
 
 	listeners := bus.listenerMap[topic]

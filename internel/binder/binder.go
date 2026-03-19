@@ -29,20 +29,20 @@ import (
 )
 
 const (
-	binderTag         = "binder"
-	defaultTag        = "default"
-	requiredTag       = "required"
+	binderTag   = "binder"
+	defaultTag  = "default"
+	requiredTag = "required"
 )
 
 type ErrorKind string
 
 const (
-	InvalidTargetErrorKind     ErrorKind = "invalid_target"
-	InvalidTagErrorKind        ErrorKind = "invalid_tag"
-	UnsettableFieldErrorKind   ErrorKind = "unsettable_field"
-	MissingRequiredErrorKind   ErrorKind = "missing_required"
-	UnsupportedTypeErrorKind   ErrorKind = "unsupported_type"
-	ConversionFailedErrorKind  ErrorKind = "conversion_failed"
+	InvalidTargetErrorKind    ErrorKind = "invalid_target"
+	InvalidTagErrorKind       ErrorKind = "invalid_tag"
+	UnsettableFieldErrorKind  ErrorKind = "unsettable_field"
+	MissingRequiredErrorKind  ErrorKind = "missing_required"
+	UnsupportedTypeErrorKind  ErrorKind = "unsupported_type"
+	ConversionFailedErrorKind ErrorKind = "conversion_failed"
 )
 
 type BindError struct {

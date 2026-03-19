@@ -74,9 +74,9 @@ func TestBinder_Bind(t *testing.T) {
 		ctx    collection.MixedMap
 	}
 	tests := []struct {
-		name string
-		args args
-		want Main
+		name    string
+		args    args
+		want    Main
 		wantErr bool
 	}{
 		{
@@ -127,9 +127,9 @@ func TestBinder_DefaultBind(t *testing.T) {
 		ctx    collection.MixedMap
 	}
 	tests := []struct {
-		name string
-		args args
-		want Main
+		name    string
+		args    args
+		want    Main
 		wantErr bool
 	}{
 		{

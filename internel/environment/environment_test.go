@@ -34,7 +34,11 @@ func TestNew(t *testing.T) {
 	if err := os.Mkdir(testdataDir, os.ModePerm); err != nil {
 		t.Errorf("nemo: Mkdir testdata failed:%v", err)
 	}
-	defer os.RemoveAll(testdataDir)
+	t.Cleanup(func() {
+		if err := os.RemoveAll(testdataDir); err != nil {
+			t.Logf("failed to remove test data dir %s: %v", testdataDir, err)
+		}
+	})
 
 	type args struct {
 		sources []PropertySource
@@ -151,19 +155,19 @@ func TestStandardEnvironment_Start(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				e := &StandardEnvironment{
-					configMap:             tt.fields.configMap,
-					propertySources:       tt.fields.propertySources,
-					initialPropertySources: append(make([]PropertySource, 0), tt.fields.propertySources...),
-					profiles:              tt.fields.profiles,
-					threshold:             NoneSuccessThreshold,
-					binder:                binder.New(),
-				}
-				if err := e.Start(tt.args.opts...); (err != nil) != tt.wantErr {
-					t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			})
+		t.Run(tt.name, func(t *testing.T) {
+			e := &StandardEnvironment{
+				configMap:              tt.fields.configMap,
+				propertySources:        tt.fields.propertySources,
+				initialPropertySources: append(make([]PropertySource, 0), tt.fields.propertySources...),
+				profiles:               tt.fields.profiles,
+				threshold:              NoneSuccessThreshold,
+				binder:                 binder.New(),
+			}
+			if err := e.Start(tt.args.opts...); (err != nil) != tt.wantErr {
+				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
