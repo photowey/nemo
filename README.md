@@ -1,6 +1,6 @@
 # `nemo`
 
-English | [中文](./README_zh_CN.md)
+English | [中文](README.zh-CN.md)
 
 `nemo` is a lightweight configuration runtime for Go, inspired by Spring Environment but designed to feel like a native Go capability.
 

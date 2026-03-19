@@ -11,6 +11,3 @@ fmt:
 
 test: tidy
 	go test ./... -cover -p 1
-
-build: tidy
-	go build ./...

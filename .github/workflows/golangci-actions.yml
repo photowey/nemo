@@ -2,44 +2,54 @@ name: Nemo CI
 
 on:
   push:
-    branches: [ master, dev ]
+    branches: [ main, dev ]
   pull_request:
-    branches: "*"
+    branches: [ "*" ]
 
 jobs:
   build:
     name: ${{ matrix.os }} - Go ${{ matrix.go_version }}
     runs-on: ${{ matrix.os }}
+
     strategy:
-      # If you want to matrix build , you can append the following list.
+      fail-fast: false
       matrix:
         go_version:
-          - 1.18
+          - '1.24'
         os:
           - ubuntu-latest
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
       - name: Set up Go ${{ matrix.go_version }}
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go_version }}
-        id: go
+          # go-version-file: go.mod
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+          cache: true
 
-      - name: Get dependencies
+      - name: Get dependencies and tidy
         run: |
           make tidy
+        env:
+          GOPROXY: "https://proxy.golang.org,direct"
 
-      - name: gofmt
+      - name: Check code formatting (gofmt)
         run: |
-          go fmt ./...
+          FILES=$(gofmt -l .)
+          if [ -n "$FILES" ]; then
+            echo "The following files are not formatted correctly:"
+            echo "$FILES"
+            echo "Please run 'go fmt ./...' locally and commit the changes."
+            exit 1
+          fi
+          echo "All files are formatted correctly."
 
-      - name: test
+      - name: Run tests
         run: |
           make test
-
-      - name: build
-        run: |
-          make build
+        env:
+          CGO_ENABLED: 0
