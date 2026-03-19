@@ -1,25 +1,30 @@
 name: golangci-lint
+
 on:
   push:
-    branches: [ master, dev ]
+    branches: [ main, dev ]
   pull_request:
-    branches: "*"
+    branches: [ "*" ]
 
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        golang:
-          - 1.18
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.18
-      - uses: actions/checkout@v4
+          go-version-file: go.mod
+          # go-version: '1.24'
+
+          cache: true
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.8
-          args: --timeout=10m
+          # version: v1.64.8
+
+          args: --timeout=10m --out-format=colored-line-number
+
+          # skip-dirs: vendor,docs

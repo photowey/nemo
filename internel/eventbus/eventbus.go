@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	listenerNilError           = errors.New("nemo: listener can't be nil on `Register` action")
-	eventTopicOrNameEmptyError = errors.New("nemo: event topic or name can't be empty")
-	listenerTopicEmptyError    = errors.New("nemo: listener topics can't be empty")
+	errListenerNil           = errors.New("nemo: listener can't be nil on `Register` action")
+	errEventTopicOrNameEmpty = errors.New("nemo: event topic or name can't be empty")
+	errListenerTopicEmpty    = errors.New("nemo: listener topics can't be empty")
 )
 
 var (

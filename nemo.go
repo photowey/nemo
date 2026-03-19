@@ -37,14 +37,14 @@ type ErrorKind = binder.ErrorKind
 type MixedMap = collection.MixedMap
 
 var (
-	NoneSuccessThreshold   = environment.NoneSuccessThreshold
-	AnyoneSuccessThreshold = environment.AnyoneSuccessThreshold
-	AllSuccessThreshold    = environment.AllSuccessThreshold
-	InvalidTargetErrorKind   = binder.InvalidTargetErrorKind
-	InvalidTagErrorKind      = binder.InvalidTagErrorKind
-	UnsettableFieldErrorKind = binder.UnsettableFieldErrorKind
-	MissingRequiredErrorKind = binder.MissingRequiredErrorKind
-	UnsupportedTypeErrorKind = binder.UnsupportedTypeErrorKind
+	NoneSuccessThreshold      = environment.NoneSuccessThreshold
+	AnyoneSuccessThreshold    = environment.AnyoneSuccessThreshold
+	AllSuccessThreshold       = environment.AllSuccessThreshold
+	InvalidTargetErrorKind    = binder.InvalidTargetErrorKind
+	InvalidTagErrorKind       = binder.InvalidTagErrorKind
+	UnsettableFieldErrorKind  = binder.UnsettableFieldErrorKind
+	MissingRequiredErrorKind  = binder.MissingRequiredErrorKind
+	UnsupportedTypeErrorKind  = binder.UnsupportedTypeErrorKind
 	ConversionFailedErrorKind = binder.ConversionFailedErrorKind
 )
 

@@ -21,8 +21,8 @@ import (
 
 	"github.com/magiconair/properties"
 	"github.com/mitchellh/mapstructure"
-	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/collection"
+	"github.com/photowey/nemo/pkg/mapz"
 	"github.com/photowey/nemo/pkg/ordered"
 	"github.com/photowey/nemo/pkg/stringz"
 	"github.com/photowey/nemo/pkg/valuez"

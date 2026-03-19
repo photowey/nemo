@@ -338,12 +338,12 @@ type Environment interface {
 // ----------------------------------------------------------------
 
 type StandardEnvironment struct {
-	configMap            collection.MixedMap    // core config container
-	propertySources      []PropertySource       // config sources
-	initialPropertySources []PropertySource     // initial config sources
-	profiles             collection.StringSlice // Profiles active e.g.: dev test prod ...
-	threshold            SuccessThreshold       // threshold
-	binder               *binder.Binder         // default binder
+	configMap              collection.MixedMap    // core config container
+	propertySources        []PropertySource       // config sources
+	initialPropertySources []PropertySource       // initial config sources
+	profiles               collection.StringSlice // Profiles active e.g.: dev test prod ...
+	threshold              SuccessThreshold       // threshold
+	binder                 *binder.Binder         // default binder
 }
 
 // ----------------------------------------------------------------
@@ -351,12 +351,12 @@ type StandardEnvironment struct {
 func New(sources ...PropertySource) Environment {
 	sourcez := append(make([]PropertySource, 0, len(sources)), sources...)
 	return &StandardEnvironment{
-		configMap:             make(collection.MixedMap),
-		propertySources:       append(make([]PropertySource, 0, len(sourcez)), sourcez...),
+		configMap:              make(collection.MixedMap),
+		propertySources:        append(make([]PropertySource, 0, len(sourcez)), sourcez...),
 		initialPropertySources: sourcez,
-		profiles:              make(collection.StringSlice, 0),
-		threshold:             NoneSuccessThreshold, // default threshold
-		binder:                binder.New(),
+		profiles:               make(collection.StringSlice, 0),
+		threshold:              NoneSuccessThreshold, // default threshold
+		binder:                 binder.New(),
 	}
 }
 

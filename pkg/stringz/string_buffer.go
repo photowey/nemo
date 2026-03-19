@@ -105,7 +105,7 @@ func (sb *StringBuffer) cloneSlice() []string {
 func implode(haystack []string, separator string) string {
 	var buf strings.Builder
 	for _, str := range haystack {
-		if "" == str {
+		if str == "" {
 			continue
 		}
 		buf.WriteString(str)
